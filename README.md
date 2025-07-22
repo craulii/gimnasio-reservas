@@ -29,18 +29,19 @@ Actualmente, el proyecto cuenta con una implementación funcional del **backend*
 ## Estructura del proyecto
 
 /src
-/app
-/api
-/login # Autenticación de usuarios
-/reservas # Crear y consultar reservas
-/cupos # Gestión de cupos por bloque horario
-/asistencia # Marcar asistencia de alumnos
-/usuarios # Listado de usuarios registrados
-/estadisticas # Acceso restringido al admin para ver uso general
-/middleware.js # Autenticación basada en headers
-/page.js # (Provisorio) Frontend de prueba
-
-
+│
+├── /app
+│
+├── /api
+│   ├── /login            # Autenticación de usuarios
+│   ├── /reservas         # Crear y consultar reservas
+│   ├── /cupos            # Gestión de cupos por bloque horario
+│   ├── /asistencia       # Marcar asistencia de alumnos
+│   ├── /usuarios         # Listado de usuarios registrados
+│   └── /estadisticas     # Acceso restringido al admin para ver uso general
+│
+├── middleware.js         # Autenticación basada en headers
+└── page.js               # (Provisorio) Frontend de prueba
 ---
 
 ## Pendientes
