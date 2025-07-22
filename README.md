@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Gimnasio USM – Cupos Diarios y Gestión de Reservas
 
-## Getting Started
+Este es un sistema de gestión de reservas de cupos diarios para el gimnasio de la Universidad Técnica Federico Santa María (UTFSM). El sistema permite a estudiantes registrarse, reservar bloques horarios de uso del gimnasio, y al profesor (administrador) gestionar cupos, asistencia y estadísticas.  
+Actualmente, el proyecto cuenta con una implementación funcional del **backend** usando **Next.js API Routes (App Router)**, y se encuentra en etapa de desarrollo de base de datos y frontend.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Funcionalidades actuales (Backend)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Autenticación básica** de usuarios (login con nombre de usuario).
+- **Reserva de cupos** por bloque horario (evita duplicadas).
+- **Gestión de cupos** por parte del administrador (aumentar/disminuir cupos).
+- **Control de asistencia** por parte del administrador.
+- **Protección de rutas** según tipo de usuario (`admin` o `alumno`).
+- **Datos en memoria** (aún sin base de datos).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tecnologías usadas
 
-## Learn More
+- [Next.js 14](https://nextjs.org/) (App Router)
+- Node.js
+- JavaScript (ES6)
+- Arquitectura modular para rutas (`/api`)
+- Middleware para autenticación
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estructura del proyecto
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+/src
+/app
+/api
+/login # Autenticación de usuarios
+/reservas # Crear y consultar reservas
+/cupos # Gestión de cupos por bloque horario
+/asistencia # Marcar asistencia de alumnos
+/usuarios # Listado de usuarios registrados
+/estadisticas # Acceso restringido al admin para ver uso general
+/middleware.js # Autenticación basada en headers
+/page.js # (Provisorio) Frontend de prueba
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Pendientes
+
+- Persistencia con base de datos (MongoDB o PostgreSQL)
+- Registro de usuarios
+- Restringir reservas a días actuales
+- Envío de correos automáticos (20 minutos antes de la reserva)
+- Interfaz web completa (frontend con Next.js + Tailwind)
+- Panel de administración con estadísticas
