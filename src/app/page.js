@@ -1,103 +1,187 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [user, setUser] = useState(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [bloque, setBloque] = useState("1-2");
+  const [cupos, setCupos] = useState({ "1-2": 10, "3-4": 10, "5-6": 10 });
+  const [asistenciaUser, setAsistenciaUser] = useState("");
+  const [asistenciaBloque, setAsistenciaBloque] = useState("1-2");
+  const [asistenciaPresente, setAsistenciaPresente] = useState(true);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  // Genera header Authorization Basic
+  function authHeader() {
+    if (!user) return {};
+    const token = btoa(`${user.username}:${user.password}`);
+    return { Authorization: `Basic ${token}` };
+  }
+
+  async function login() {
+    setMessage("...");
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setUser({ username, password, role: data.role });
+      setMessage(`Login exitoso como ${data.role}`);
+      fetchCupos();
+    } else {
+      setMessage(data.message || "Error en login");
+    }
+  }
+
+  async function fetchCupos() {
+    // Simulación, idealmente desde backend
+    setCupos({ "1-2": 10, "3-4": 10, "5-6": 10 });
+  }
+
+  async function hacerReserva() {
+    setMessage("Reservando...");
+    const res = await fetch("/api/reservas", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+      },
+      body: JSON.stringify({ bloque }),
+    });
+    const text = await res.text();
+    setMessage(text);
+  }
+
+  async function modificarCupos(cantidad) {
+    setMessage("Modificando cupos...");
+    const res = await fetch("/api/cupos", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+      },
+      body: JSON.stringify({ bloque, cantidad }),
+    });
+    const data = await res.json();
+    if (res.ok) setCupos(data.cupos);
+    setMessage(data.message || "Error modificando cupos");
+  }
+
+  async function marcarAsistencia() {
+    setMessage("Marcando asistencia...");
+    const res = await fetch("/api/asistencia", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeader(),
+      },
+      body: JSON.stringify({
+        username: asistenciaUser,
+        bloque: asistenciaBloque,
+        presente: asistenciaPresente,
+      }),
+    });
+    const data = await res.json();
+    setMessage(data.message || "Error marcando asistencia");
+  }
+
+  return (
+    <main style={{ padding: "2rem", fontFamily: "Arial" }}>
+      {!user ? (
+        <>
+          <h1>Login</h1>
+          <input
+            placeholder="Usuario"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <br />
+          <input
+            placeholder="Contraseña"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <br />
+          <button onClick={login}>Entrar</button>
+          <p>{message}</p>
+        </>
+      ) : (
+        <>
+          <h1>
+            Bienvenido, {user.username} ({user.role})
+          </h1>
+          <button
+            onClick={() => {
+              setUser(null);
+              setMessage("Sesión cerrada");
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            Cerrar sesión
+          </button>
+          <hr />
+
+          {user.role === "alumno" && (
+            <>
+              <h2>Reservar cupo</h2>
+              <select onChange={(e) => setBloque(e.target.value)} value={bloque}>
+                {Object.keys(cupos).map((b) => (
+                  <option key={b} value={b}>
+                    {b} (Cupos: {cupos[b]})
+                  </option>
+                ))}
+              </select>
+              <button onClick={hacerReserva}>Reservar</button>
+            </>
+          )}
+
+          {user.role === "admin" && (
+            <>
+              <h2>Modificar cupos</h2>
+              <select onChange={(e) => setBloque(e.target.value)} value={bloque}>
+                {Object.keys(cupos).map((b) => (
+                  <option key={b} value={b}>
+                    {b} (Cupos: {cupos[b]})
+                  </option>
+                ))}
+              </select>
+              <button onClick={() => modificarCupos(1)}>Sumar 1 cupo</button>
+              <button onClick={() => modificarCupos(-1)}>Restar 1 cupo</button>
+
+              <h2>Marcar asistencia</h2>
+              <input
+                placeholder="Usuario a marcar"
+                value={asistenciaUser}
+                onChange={(e) => setAsistenciaUser(e.target.value)}
+              />
+              <select
+                onChange={(e) => setAsistenciaBloque(e.target.value)}
+                value={asistenciaBloque}
+              >
+                {Object.keys(cupos).map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={asistenciaPresente}
+                  onChange={(e) => setAsistenciaPresente(e.target.checked)}
+                />
+                Presente
+              </label>
+              <button onClick={marcarAsistencia}>Marcar</button>
+            </>
+          )}
+
+          <p>{message}</p>
+        </>
+      )}
+    </main>
   );
 }
