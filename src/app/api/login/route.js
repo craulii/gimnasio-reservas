@@ -1,19 +1,37 @@
+import pool from '../../lib/db';
+
 export async function POST(request) {
-  const { username, password } = await request.json();
+  const { username: email, password } = await request.json();
 
-  const USERS = [
-    { username: 'alumno1', password: '1234', role: 'alumno' },
-    { username: 'admin1', password: 'adminpass', role: 'admin' }
-  ];
-
-  const user = USERS.find(u => u.username === username && u.password === password);
-  if (!user) {
-    return new Response(JSON.stringify({ message: 'Credenciales inválidas' }), {
-      status: 401
-    });
+  if (!email || !password) {
+    return new Response("Faltan credenciales", { status: 400 });
   }
 
-  return new Response(JSON.stringify({ message: 'Login exitoso', role: user.role }), {
-    status: 200
-  });
+  try {
+    const [rows] = await pool.query(
+      "SELECT rol, password, is_admin, name FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (rows.length === 0)
+      return new Response("Credenciales inválidas", { status: 401 });
+
+    const user = rows[0];
+
+    if (user.password !== password) {
+      return new Response("Credenciales inválidas", { status: 401 });
+    }
+
+    return new Response(
+      JSON.stringify({
+        rol: user.rol,
+        is_admin: user.is_admin,
+        name: user.name,
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error en login:", error);
+    return new Response("Error interno", { status: 500 });
+  }
 }

@@ -1,37 +1,65 @@
-let RESERVAS = [];
+import pool from '../../lib/db';
 
-export async function POST(request) {
-  const auth = request.headers.get("authorization");
-  if (!auth || !auth.startsWith("Basic ")) {
-    return new Response("No autorizado", { status: 401 });
-  }
+function parseAuth(auth) {
+  if (!auth || !auth.startsWith("Basic ")) return null;
   const base64Credentials = auth.split(" ")[1];
   const credentials = Buffer.from(base64Credentials, "base64").toString("ascii");
   const [username, password] = credentials.split(":");
+  return { username, password };
+}
 
-  const users = [
-    { username: "alumno1", password: "1234", role: "alumno" },
-    { username: "admin1", password: "adminpass", role: "admin" },
-  ];
-  const user = users.find(
-    (u) => u.username === username && u.password === password
-  );
-  if (!user) return new Response("No autorizado", { status: 401 });
-  if (user.role !== "alumno")
-    return new Response("Solo alumnos pueden reservar", { status: 403 });
+async function authenticate(username, password) {
+  const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [username]);
+  if (rows.length === 0) return null;
+  const user = rows[0];
+  if (user.password !== password) return null;
+  return user;
+}
 
-  const { bloque } = await request.json();
-  const yaReservado = RESERVAS.find(
-    (r) => r.username === user.username && r.bloque === bloque
-  );
-  if (yaReservado)
-    return new Response("Ya tienes una reserva para ese bloque", {
-      status: 400,
-    });
+export async function POST(request) {
+  const auth = request.headers.get("authorization");
+  const creds = parseAuth(auth);
+  if (!creds) return new Response("Acceso no autorizado. Por favor, inicia sesión.", { status: 401 });
 
-  RESERVAS.push({ username: user.username, bloque, fecha: new Date().toISOString() });
-  return new Response(
-    JSON.stringify({ message: "Reserva realizada" }),
-    { status: 201, headers: { "Content-Type": "application/json" } }
-  );
+  const user = await authenticate(creds.username, creds.password);
+  if (!user) return new Response("Acceso no autorizado. Usuario o contraseña incorrectos.", { status: 401 });
+
+  if (user.is_admin !== 0) return new Response("Solo los alumnos pueden realizar reservas.", { status: 403 });
+
+  const { bloque_horario } = await request.json();
+  if (!bloque_horario) return new Response("Debe seleccionar un bloque horario para reservar.", { status: 400 });
+
+  try {
+    const [reservasHoy] = await pool.query(
+      `SELECT * FROM reservas WHERE email = ? AND fecha = CURDATE()`,
+      [user.email]
+    );
+    if (reservasHoy.length > 0) {
+      const tieneEnBloque = reservasHoy.some(r => r.bloque_horario === bloque_horario);
+      if (tieneEnBloque) {
+        return new Response(
+          `Ya tienes una reserva para el bloque ${bloque_horario} hoy. No puedes reservar más de una vez en el mismo bloque.`,
+          { status: 400 }
+        );
+      } else {
+        return new Response(
+          `Ya tienes una reserva para hoy en otro bloque. Solo puedes reservar una vez al día.`,
+          { status: 400 }
+        );
+      }
+    }
+
+    await pool.query(
+      "INSERT INTO reservas (email, fecha, bloque_horario, asistio) VALUES (?, CURDATE(), ?, 0)",
+      [user.email, bloque_horario]
+    );
+
+    return new Response(
+      JSON.stringify({ message: `Reserva realizada exitosamente para el bloque ${bloque_horario}. ¡Gracias!` }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Error al realizar reserva:", error);
+    return new Response("Error interno del servidor. Por favor, intenta más tarde.", { status: 500 });
+  }
 }
