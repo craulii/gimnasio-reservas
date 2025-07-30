@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { MdFitnessCenter } from "react-icons/md";
 import {
   FiUser,
   FiLock,
@@ -214,64 +215,128 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden md:max-w-2xl">
-        <div className="p-8">
-          {!user ? (
-            <div className="space-y-6">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-indigo-600">Sistema de Reservas</h1>
-                <p className="mt-2 text-gray-800">Inicia sesión para continuar</p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-800">Correo</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiUser className="h-5 w-5 text-gray-800" />
-                    </div>
-                    <input
-                      className="text-gray-800 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md p-2 border"
-                      placeholder="Correo"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-800">Contraseña</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiLock className="h-5 w-5 text-gray-800" />
-                    </div>
-                    <input
-                      type="password"
-                      className="text-gray-800 placeholder-gray-500 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md p-2 border"
-                      placeholder="Contraseña"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <button
-                  onClick={login}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <FiLogIn className="mr-2 h-5 w-5" />
-                  Iniciar sesión
-                </button>
-              </div>
-
-              {message && (
-                <div className="rounded-md bg-blue-50 p-4">
-                  <p className="text-sm text-blue-800">{message}</p>
-                </div>
-              )}
+    <div
+      className="
+        flex min-h-screen items-center justify-center
+        bg-amber-100
+        bg-[url('/gym-bg.jpg')] bg-cover bg-center
+      "
+    >
+      <div
+        className="
+        w-full max-w-md
+        bg-stone-400/90 bg-opacity-90
+        rounded-xl shadow-2xl
+        border-2 border-yellow-800
+        p-8
+        "
+      >
+        {!user ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              login();
+            }}
+            className="space-y-6"
+          >
+            <div className="text-center">
+              <MdFitnessCenter className="mx-auto h-12 w-12 text-yellow-800" />
+              <h1 className="mt-2 text-3xl font-extrabold text-white">
+                BetterGym USM
+              </h1>
+              <p className="mt-1 text-sm font-bold text-yellow-800">
+                ¡Potencia tu entrenamiento con Defider!
+              </p>
             </div>
-          ) : (
+
+            {/* EMAIL */}
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-yellow-800"
+              >
+                Correo
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiUser className="h-5 w-5 text-yellow-800" />
+                </div>
+                <input
+                  id="username"
+                  name="username"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="tucorreo@usm.cl"
+                  className="
+                    block w-full pl-10 pr-4 py-2
+                    bg-gray-700 placeholder-gray-500 text-white
+                    border border-gray-600 rounded-md
+                    focus:outline-none focus:ring-2 focus:ring-green-400
+                    focus:border-green-400
+                    sm:text-sm
+                  "
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* PASSWORD */}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-yellow-800"
+              >
+                Contraseña
+              </label>
+              <div className="mt-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiLock className="h-5 w-5 text-yellow-800" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  placeholder="••••••••"
+                  className="
+                    block w-full pl-10 pr-4 py-2
+                    bg-gray-700 placeholder-gray-500 text-white
+                    border border-gray-600 rounded-md
+                    focus:outline-none focus:ring-2 focus:ring-green-400
+                    focus:border-green-400
+                    sm:text-sm
+                  "
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* SUBMIT */}
+            <button
+              type="submit"
+              className="
+                w-full flex items-center justify-center py-2 px-4
+                bg-yellow-500 hover:bg-yellow-600 text-white font-bold
+                rounded-md shadow-lg transition
+                focus:outline-none focus:ring-2 focus:ring-offset-2
+                focus:ring-green-400
+              "
+            >
+              <FiLogIn className="mr-2 h-5 w-5" />
+              Iniciar sesión
+            </button>
+
+            {message && (
+              <p className="mt-4 text-center text-sm text-red-400">
+                {message}
+              </p>
+            )}
+          </form>
+        ) : (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
@@ -437,6 +502,5 @@ export default function Home() {
           )}
         </div>
       </div>
-    </div>
   );
 }
