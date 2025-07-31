@@ -9,6 +9,7 @@ export async function GET() {
       cupos[row.bloque] = {
         total: row.total,
         reservados: row.reservados,
+        disponibles: row.total - row.reservados
       };
     }
 
@@ -34,14 +35,18 @@ export async function PATCH(request) {
   }
 
   try {
-    const [rows] = await pool.query('SELECT total FROM cupos WHERE bloque = ?', [bloque]);
+    const [rows] = await pool.query('SELECT total, reservados FROM cupos WHERE bloque = ?', [bloque]);
 
     if (rows.length === 0) {
       return new Response('Bloque no encontrado', { status: 404 });
     }
 
     let nuevoTotal = rows[0].total + cantidad;
-    if (nuevoTotal < 0) nuevoTotal = 0; // Evitar negativos
+    if (nuevoTotal < 0) nuevoTotal = 0;
+    
+    if (nuevoTotal < rows[0].reservados) {
+      return new Response(`No se puede reducir a ${nuevoTotal}. Hay ${rows[0].reservados} reservas activas.`, { status: 400 });
+    }
 
     await pool.query('UPDATE cupos SET total = ? WHERE bloque = ?', [nuevoTotal, bloque]);
 
@@ -51,6 +56,7 @@ export async function PATCH(request) {
       cupos[row.bloque] = {
         total: row.total,
         reservados: row.reservados,
+        disponibles: row.total - row.reservados
       };
     }
 

@@ -10,14 +10,14 @@ export async function POST(request) {
   const { username, bloque, presente } = await request.json();
 
   try {
-    const [users] = await pool.query("SELECT id FROM users WHERE email = ?", [username]);
-    if (users.length === 0) return new Response("Usuario no encontrado", { status: 404 });
-
-    const userId = users[0].id;
-    await pool.query(
-      "UPDATE reservas SET asistio = ? WHERE user_id = ? AND bloque_horario = ? AND fecha = CURDATE()",
-      [presente ? 1 : 0, userId, bloque]
+    const [result] = await pool.query(
+      "UPDATE reservas SET asistio = ? WHERE email = ? AND bloque_horario = ? AND fecha = CURDATE()",
+      [presente ? 1 : 0, username, bloque]
     );
+
+    if (result.affectedRows === 0) {
+      return new Response("No se encontró la reserva", { status: 404 });
+    }
 
     return new Response(JSON.stringify({ message: "Asistencia registrada" }), {
       status: 200,

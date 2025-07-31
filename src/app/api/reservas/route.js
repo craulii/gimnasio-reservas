@@ -30,10 +30,22 @@ export async function POST(request) {
   if (!bloque_horario) return new Response("Debe seleccionar un bloque horario para reservar.", { status: 400 });
 
   try {
+    // Verificar si hay cupos disponibles
+    const [cuposResult] = await pool.query('SELECT total, reservados FROM cupos WHERE bloque = ?', [bloque_horario]);
+    if (cuposResult.length === 0) {
+      return new Response("Bloque horario no existe", { status: 404 });
+    }
+    
+    const { total, reservados } = cuposResult[0];
+    if (reservados >= total) {
+      return new Response("No hay cupos disponibles para este bloque", { status: 400 });
+    }
+
     const [reservasHoy] = await pool.query(
       `SELECT * FROM reservas WHERE email = ? AND fecha = CURDATE()`,
       [user.email]
     );
+    
     if (reservasHoy.length > 0) {
       const tieneEnBloque = reservasHoy.some(r => r.bloque_horario === bloque_horario);
       if (tieneEnBloque) {
@@ -49,16 +61,28 @@ export async function POST(request) {
       }
     }
 
+    // Insertar reserva y actualizar contador
+    await pool.query("BEGIN");
+    
     await pool.query(
       "INSERT INTO reservas (email, fecha, bloque_horario, asistio) VALUES (?, CURDATE(), ?, 0)",
       [user.email, bloque_horario]
     );
+
+    // NUEVO: Actualizar contador de reservados
+    await pool.query(
+      "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ?",
+      [bloque_horario]
+    );
+
+    await pool.query("COMMIT");
 
     return new Response(
       JSON.stringify({ message: `Reserva realizada exitosamente para el bloque ${bloque_horario}. ¡Gracias!` }),
       { status: 201, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
+    await pool.query("ROLLBACK");
     console.error("Error al realizar reserva:", error);
     return new Response("Error interno del servidor. Por favor, intenta más tarde.", { status: 500 });
   }
