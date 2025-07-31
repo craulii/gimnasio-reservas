@@ -1,37 +1,38 @@
-import pool from '../../../lib/db';
+import pool from "../../../lib/db";
 
 export async function GET(request) {
-  const userHeader = request.headers.get('x-user');
-  if (!userHeader) return new Response('No autorizado', { status: 401 });
+  const userHeader = request.headers.get("x-user");
+  if (!userHeader) return new Response("No autorizado", { status: 401 });
 
   const user = JSON.parse(userHeader);
-  if (user.rol !== 'admin') return new Response('Solo admin', { status: 403 });
+  if (user.rol !== "admin") return new Response("Solo admin", { status: 403 });
 
   const { searchParams } = new URL(request.url);
-  const bloque = searchParams.get('bloque');
-  const fechaInicio = searchParams.get('fechaInicio');
-  const fechaFin = searchParams.get('fechaFin');
+  const bloque = searchParams.get("bloque");
+  const fechaInicio = searchParams.get("fechaInicio");
+  const fechaFin = searchParams.get("fechaFin");
 
   if (!bloque) {
-    return new Response('Bloque requerido', { status: 400 });
+    return new Response("Bloque requerido", { status: 400 });
   }
 
   try {
-    console.log('=== ESTADÍSTICAS DE BLOQUE ===');
-    console.log('Bloque:', bloque);
-    console.log('Rango:', fechaInicio, 'a', fechaFin);
+    console.log("=== ESTADÍSTICAS DE BLOQUE ===");
+    console.log("Bloque:", bloque);
+    console.log("Rango:", fechaInicio, "a", fechaFin);
 
-    let fechaCondicion = '1=1';
+    let fechaCondicion = "1=1";
     let fechaParams = [bloque];
-    
+
     if (fechaInicio && fechaFin) {
-      fechaCondicion = 'fecha BETWEEN ? AND ?';
+      fechaCondicion = "fecha BETWEEN ? AND ?";
       fechaParams = [bloque, fechaInicio, fechaFin];
     } else {
-      fechaCondicion = 'fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)';
+      fechaCondicion = "fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
     }
 
-    const [estadisticasGenerales] = await pool.query(`
+    const [estadisticasGenerales] = await pool.query(
+      `
       SELECT 
         COUNT(*) as total_reservas,
         SUM(asistio) as total_asistencias,
@@ -43,9 +44,12 @@ export async function GET(request) {
         MAX(fecha) as ultima_fecha
       FROM reservas 
       WHERE bloque_horario = ? AND ${fechaCondicion}
-    `, fechaParams);
+    `,
+      fechaParams
+    );
 
-    const [datosPorDia] = await pool.query(`
+    const [datosPorDia] = await pool.query(
+      `
       SELECT 
         fecha,
         COUNT(*) as reservas,
@@ -57,9 +61,12 @@ export async function GET(request) {
       GROUP BY fecha
       ORDER BY fecha DESC
       LIMIT 30
-    `, fechaParams);
+    `,
+      fechaParams
+    );
 
-    const [alumnosFrecuentes] = await pool.query(`
+    const [alumnosFrecuentes] = await pool.query(
+      `
       SELECT 
         u.name,
         r.email,
@@ -72,9 +79,12 @@ export async function GET(request) {
       GROUP BY r.email
       ORDER BY veces_reservado DESC
       LIMIT 10
-    `, fechaParams);
+    `,
+      fechaParams
+    );
 
-    const [estadisticasDiaSemana] = await pool.query(`
+    const [estadisticasDiaSemana] = await pool.query(
+      `
       SELECT 
         DAYNAME(fecha) as dia_semana,
         COUNT(*) as total_reservas,
@@ -85,9 +95,12 @@ export async function GET(request) {
       WHERE bloque_horario = ? AND ${fechaCondicion}
       GROUP BY DAYOFWEEK(fecha), DAYNAME(fecha)
       ORDER BY DAYOFWEEK(fecha)
-    `, fechaParams);
+    `,
+      fechaParams
+    );
 
-    const [tendenciaReciente] = await pool.query(`
+    const [tendenciaReciente] = await pool.query(
+      `
       SELECT 
         fecha,
         COUNT(*) as reservas,
@@ -97,7 +110,9 @@ export async function GET(request) {
       WHERE bloque_horario = ? AND fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
       GROUP BY fecha
       ORDER BY fecha
-    `, [bloque]);
+    `,
+      [bloque]
+    );
 
     const resultado = {
       bloque,
@@ -105,23 +120,26 @@ export async function GET(request) {
       datosPorDia,
       alumnosFrecuentes,
       estadisticasDiaSemana,
-      tendenciaReciente
+      tendenciaReciente,
     };
 
-    console.log('Resultado estadísticas bloque:', resultado);
+    console.log("Resultado estadísticas bloque:", resultado);
 
     return new Response(JSON.stringify(resultado), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error('Error en estadísticas bloque:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Error interno',
-      message: error.message
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error("Error en estadísticas bloque:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Error interno",
+        message: error.message,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

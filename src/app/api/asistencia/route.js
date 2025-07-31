@@ -1,11 +1,12 @@
-import pool from '../../lib/db';
+import pool from "../../lib/db";
 
 export async function POST(request) {
   const userHeader = request.headers.get("x-user");
   if (!userHeader) return new Response("No autorizado", { status: 401 });
 
   const user = JSON.parse(userHeader);
-  if (user.rol !== "admin") return new Response("Solo admin puede marcar asistencia", { status: 403 });
+  if (user.rol !== "admin")
+    return new Response("Solo admin puede marcar asistencia", { status: 403 });
 
   const { username, bloque, presente } = await request.json();
 

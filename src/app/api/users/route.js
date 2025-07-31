@@ -1,9 +1,11 @@
-import pool from '../../lib/db';
+import pool from "../../lib/db";
 
 export async function GET() {
   try {
     const [users] = await pool.query("SELECT id, name, email, rol FROM users");
-    return new Response(JSON.stringify(users), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify(users), {
+      headers: { "Content-Type": "application/json" },
+    });
   } catch {
     return new Response("Error interno", { status: 500 });
   }
