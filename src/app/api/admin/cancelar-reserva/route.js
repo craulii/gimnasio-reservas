@@ -42,6 +42,7 @@ export async function DELETE(request) {
           "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND fecha = CURDATE()",
           [bloque_horario]
         );
+
         console.log("Contador de cupos actualizado");
       }
     }
