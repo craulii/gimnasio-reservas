@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { MdFitnessCenter } from "react-icons/md";
 import {
   FiUser,
   FiLock,
@@ -667,7 +666,7 @@ export default function Home() {
         {!user ? (
           <div className="space-y-6">
             <div className="text-center">
-              <MdFitnessCenter className="mx-auto h-12 w-12 text-yellow-800" />
+              <img src="/usm.png" alt="USM" className="mx-auto h-26 w-30"/>
               <h1 className="mt-2 text-3xl font-extrabold text-white">
                 BetterGym USM
               </h1>
@@ -903,7 +902,7 @@ export default function Home() {
 
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center py-2 px-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-md shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
+                  className="w-full flex items-center justify-center py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-md shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
                 >
                   <FiUser className="mr-2 h-5 w-5" />
                   Crear cuenta

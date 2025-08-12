@@ -1,50 +1,77 @@
 import pool from "../../lib/db";
+import bcrypt from "bcryptjs";
+
+const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
+
+function isUsmEmail(email) {
+  return USM_EMAIL_REGEX.test(String(email).trim().toLowerCase());
+}
 
 export async function POST(request) {
   try {
     const { name, email, password, confirmPassword } = await request.json();
-
     if (!name || !email || !password || !confirmPassword) {
-      return new Response("Todos los campos son obligatorios", { status: 400 });
-    }
-
-    if (password !== confirmPassword) {
-      return new Response("Las contraseñas no coinciden", { status: 400 });
-    }
-
-    if (password.length < 6) {
-      return new Response("La contraseña debe tener al menos 6 caracteres", {
+      return new Response(JSON.stringify({ error: "Todos los campos son obligatorios" }), {
         status: 400,
+        headers: { "Content-Type": "application/json" },
       });
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response("Email inválido", { status: 400 });
+    const normalizedName = String(name).trim();
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    if (!isUsmEmail(normalizedEmail)) {
+      return new Response(JSON.stringify({ error: "Solo se permiten correos @usm.cl" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    const [existingUser] = await pool.query(
-      "SELECT email FROM users WHERE email = ?",
-      [email]
-    );
-
-    if (existingUser.length > 0) {
-      return new Response("Este email ya está registrado", { status: 409 });
+    if (password !== confirmPassword) {
+      return new Response(JSON.stringify({ error: "Las contraseñas no coinciden" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
+    // Política de contraseñas: 8–72 (72 es el máximo efectivo de bcrypt por si acaso)
+    if (password.length < 8 || password.length > 72) {
+      return new Response(
+        JSON.stringify({ error: "La contraseña debe tener entre 8 y 72 caracteres" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Chequeo de existencia
+    const [existingUser] = await pool.query("SELECT email FROM users WHERE email = ?", [
+      normalizedEmail,
+    ]);
+
+    if (existingUser.length > 0) { //Evitamos filtrar más detalles.
+      return new Response(JSON.stringify({ error: "Este email ya está registrado" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Hash pass
+    const passwordHash = await bcrypt.hash(password, 12);
     await pool.query(
       "INSERT INTO users (rol, name, email, password, is_admin) VALUES (?, ?, ?, ?, ?)",
-      ["alumno", name.trim(), email.toLowerCase().trim(), password, 0]
+      ["alumno", normalizedName, normalizedEmail, passwordHash, 0]
     );
 
-    console.log(`[REGISTER] Usuario creado: ${name} (${email})`);
+    console.log(`[REGISTER] Usuario creado: ${normalizedName} (${normalizedEmail})`);
 
     return new Response(
       JSON.stringify({
         message: "Usuario creado exitosamente",
         user: {
-          name: name.trim(),
-          email: email.toLowerCase().trim(),
+          name: normalizedName,
+          email: normalizedEmail,
           rol: "alumno",
         },
       }),
@@ -56,10 +83,17 @@ export async function POST(request) {
   } catch (error) {
     console.error("[REGISTER] Error:", error);
 
+    // Manejo de clave duplicada por si el índice único dispara primero
     if (error.code === "ER_DUP_ENTRY") {
-      return new Response("Este email ya está registrado", { status: 409 });
+      return new Response(JSON.stringify({ error: "Este email ya está registrado" }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    return new Response("Error interno del servidor", { status: 500 });
+    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 }
