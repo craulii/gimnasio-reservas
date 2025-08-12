@@ -951,31 +951,108 @@ export default function Home() {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">
-                  Bienvenido, {user.name}
-                </h1>
-                <p className="text-sm text-indigo-600 capitalize">
-                  {user.is_admin === 1 ? "Administrador" : "Alumno"}
-                </p>
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
+                {/* Lado izquierdo: avatar + info */}
+                <div className="flex items-center gap-4">
+                  {/* Avatar con iniciales */}
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-semibold">
+                    {user?.name?.trim()?.charAt(0)?.toUpperCase() || "U"}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-2xl font-bold text-gray-800">
+                        Bienvenido, {user?.name || "Usuario"}
+                      </h1>
+
+                      {/* Badge de rol de permisos */}
+                      <span
+                        className={
+                          (user?.is_admin === 1 || user?.is_admin === true)
+                            ? "inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200"
+                            : "inline-flex items-center rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-200"
+                        }
+                        title="Rol de permisos"
+                      >
+                        {(user?.is_admin === 1 || user?.is_admin === true) ? "Administrador" : "Alumno"}
+                      </span>
+                    </div>
+
+                    {/* Email + ID académico (campo users.rol en tu BD) */}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                      {user?.email && (
+                        <span className="inline-flex items-center gap-2">
+                          <img
+                            src="/usm.png"
+                            alt="USM"
+                            className="h-4 w-4 select-none"
+                            loading="lazy"
+                            draggable="false"
+                          />
+                          <span className="truncate max-w-[240px] sm:max-w-none">{user.email}</span>
+                        </span>
+                      )}
+                      {user?.rol && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <span className="inline-flex items-center gap-1">
+                            <span className="font-medium text-gray-700">ID:</span>
+                            <span className="font-mono text-gray-700">{user.rol}</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lado derecho: acciones */}
+                <div className="flex items-center gap-2 sm:self-start">
+                  {/* Copiar email (opcional) */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (user?.email) {
+                        try {
+                          await navigator.clipboard.writeText(user.email);
+                          setMessage("Email copiado al portapapeles");
+                        } catch {
+                          setMessage("No se pudo copiar el email");
+                        }
+                      }
+                    }}
+                    className="inline-flex items-center rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    Copiar email
+                  </button>
+
+                  {/* Cerrar sesión */}
+                  <button
+                    onClick={() => {
+                      console.log("[logout] Cerrando sesión de usuario:", user?.name);
+                      setUser(null);
+                      setMessage("Sesión cerrada con éxito");
+                    }}
+                    className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <svg
+                      className="mr-1 h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1" />
+                    </svg>
+                    Cerrar sesión
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  console.log(
-                    "[logout] Cerrando sesión de usuario:",
-                    user.name
-                  );
-                  setUser(null);
-                  setMessage("Sesión cerrada con éxito");
-                }}
-                className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                <FiLogOut className="mr-1 h-4 w-4" />
-                Cerrar sesión
-              </button>
             </div>
+            )}
+
+            
 
             {message && (
               <div
@@ -2427,8 +2504,6 @@ export default function Home() {
               </>
             )}
           </div>
-        )}
       </div>
-    </div>
   );
 }
