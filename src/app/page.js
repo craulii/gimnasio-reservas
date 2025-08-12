@@ -41,6 +41,7 @@ export default function Home() {
     email: "",
     password: "",
     confirmPassword: "",
+    rol: "",
   });
   const [usuarios, setUsuarios] = useState([]);
   const [busquedaUsuarios, setBusquedaUsuarios] = useState("");
@@ -515,10 +516,10 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(registerData),
-      });
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(registerData),
+    });
 
       const data = await res.json();
       console.log("[register] Respuesta register:", res.status, data);
@@ -666,7 +667,7 @@ export default function Home() {
         {!user ? (
           <div className="space-y-6">
             <div className="text-center">
-              <img src="/usm.png" alt="USM" className="mx-auto h-26 w-30"/>
+              <img src="/usm.png" alt="USM" className="mx-auto h-26 w-30" />
               <h1 className="mt-2 text-3xl font-extrabold text-white">
                 BetterGym USM
               </h1>
@@ -804,6 +805,33 @@ export default function Home() {
                         setRegisterData({
                           ...registerData,
                           name: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label
+                    htmlFor="register-rol"
+                    className="block text-sm font-medium text-yellow-800"
+                  >
+                    Rol
+                  </label>
+                  <div className="mt-1 relative">
+                    <input
+                      id="register-rol"
+                      name="rol"
+                      type="text"
+                      required
+                      placeholder="Rol"
+                      pattern="^\d{9}-\d{1}$"
+                      className="block w-full pl-3 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+                      value={registerData.rol || ""}
+                      onChange={(e) =>
+                        setRegisterData({
+                          ...registerData,
+                          rol: e.target.value,
                         })
                       }
                     />

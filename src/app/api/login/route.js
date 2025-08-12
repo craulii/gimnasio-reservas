@@ -53,7 +53,7 @@ export async function POST(request) {
     return new Response(
       JSON.stringify({
         rol: user.rol,
-        is_admin: !!user.is_admin,
+        is_admin: Number(user.is_admin),
         name: user.name,
         email: user.email,
       }),
