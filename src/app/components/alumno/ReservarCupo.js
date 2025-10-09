@@ -3,9 +3,9 @@ import { useState } from "react";
 import ApiService from "../../services/api";
 
 export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCupos }) {
-  const [bloque, setBloque] = useState(null);
+  const [bloqueSeleccionado, setbloqueSeleccionado] = useState(null);
 
-  const hacerReserva = async () => {
+  const hacerReserva = async (bloque) => {
     if (!bloque) {
       setMessage("Selecciona un bloque primero");
       return;
@@ -14,9 +14,21 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
     setMessage("Reservando...");
     try {
       const { ok, data } = await ApiService.makeReserva(bloque, user);
-      setMessage(data);
-      if (ok) await fetchCupos();
+      
+      if (ok) {
+        // Si la respuesta es JSON
+        if (typeof data === 'object' && data.message) {
+          setMessage(data.message);
+        } else {
+          // Si la respuesta es texto plano
+          setMessage(data || "Reserva realizada exitosamente");
+        }
+        await fetchCupos();
+      } else {
+        setMessage(data || "Error al realizar la reserva");
+      }
     } catch (error) {
+      console.error("Error en reserva:", error);
       setMessage("Error al reservar");
     }
   };
@@ -47,10 +59,7 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
                 </div>
                 <button
                   disabled={disponibles <= 0}
-                  onClick={() => {
-                    setBloque(b);
-                    hacerReserva();
-                  }}
+                  onClick={() => hacerReserva(b)} // Arreglado: llamar con el bloque directamente
                   className={`px-4 py-2 rounded text-white ${
                     disponibles > 0
                       ? "bg-indigo-600 hover:bg-indigo-700"

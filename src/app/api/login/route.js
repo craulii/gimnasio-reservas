@@ -1,6 +1,5 @@
-// app/api/login/route.js (ajusta la ruta según tu estructura)
 import pool from "../../lib/db";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
 

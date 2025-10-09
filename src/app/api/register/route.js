@@ -1,5 +1,5 @@
 import pool from "../../lib/db";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
 const ROL_REGEX = /^\d{9}-\d{1}$/;

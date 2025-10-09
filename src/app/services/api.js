@@ -210,6 +210,53 @@ class ApiService {
       headers: this.adminHeader(),
     });
   }
+
+  static authHeader(user) {
+  if (!user || !user.username || !user.password) {
+    console.log("[authHeader] No hay usuario o credenciales");
+    return {};
+  }
+  const token = btoa(`${user.username}:${user.password}`);
+  console.log("[authHeader] Generando header con token para:", user.username);
+  return { Authorization: `Basic ${token}` };
 }
+
+static async makeReserva(bloque_horario, user) {
+  try {
+    console.log("[makeReserva] Enviando reserva para bloque:", bloque_horario);
+    console.log("[makeReserva] Usuario:", user?.username);
+    
+    const headers = {
+      "Content-Type": "application/json",
+      ...this.authHeader(user),
+    };
+    
+    console.log("[makeReserva] Headers:", headers);
+    
+    const res = await fetch(`${API_BASE}/api/reservas`, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({ bloque_horario }),
+    });
+    
+    let data;
+    const contentType = res.headers.get("content-type");
+    
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      data = await res.text();
+    }
+    
+    console.log("[makeReserva] Respuesta:", res.status, data);
+    
+    return { ok: res.ok, data };
+  } catch (error) {
+    console.error("[makeReserva] Error:", error);
+    return { ok: false, data: "Error de conexión" };
+  }
+}
+}
+
 
 export default ApiService;

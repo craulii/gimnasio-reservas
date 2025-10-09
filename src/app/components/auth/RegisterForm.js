@@ -16,11 +16,28 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
     e.preventDefault();
     setMessage("Creando cuenta...");
 
+    // Validaciones del lado del cliente
+    if (registerData.password !== registerData.confirmPassword) {
+      setMessage("Las contraseñas no coinciden");
+      return;
+    }
+
+    if (registerData.password.length < 8) {
+      setMessage("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    const rolRegex = /^\d{9}-\d{1}$/;
+    if (!rolRegex.test(registerData.rol)) {
+      setMessage("El formato del rol debe ser: 123456789-0");
+      return;
+    }
+
     try {
       const { ok, data } = await ApiService.register(registerData);
       
       if (ok) {
-        setMessage("¡Cuenta creada exitosamente! Ya puedes iniciar sesión.");
+        setMessage(data.message || "¡Cuenta creada exitosamente! Ya puedes iniciar sesión.");
         setRegisterData({
           name: "",
           email: "",
@@ -28,11 +45,14 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
           confirmPassword: "",
           rol: "",
         });
-        setIsRegistering(false);
+        setTimeout(() => {
+          setIsRegistering(false);
+        }, 2000);
       } else {
-        setMessage(data.message || "Error al crear la cuenta");
+        setMessage(data.error || data.message || "Error al crear la cuenta");
       }
     } catch (error) {
+      console.error("Error en registro:", error);
       setMessage("Error de conexión");
     }
   };
@@ -61,15 +81,16 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
       
       <div>
         <label htmlFor="register-rol" className="block text-sm font-medium text-yellow-800">
-          Rol
+          Rol USM
         </label>
         <div className="mt-1 relative">
           <input
             id="register-rol"
             type="text"
             required
-            placeholder="Rol (123456789-0)"
+            placeholder="123456789-0"
             pattern="^\d{9}-\d{1}$"
+            title="Formato: 123456789-0"
             className="block w-full pl-3 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.rol}
             onChange={(e) => setRegisterData({ ...registerData, rol: e.target.value })}
@@ -79,7 +100,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
 
       <div>
         <label htmlFor="register-email" className="block text-sm font-medium text-yellow-800">
-          Correo electrónico
+          Correo USM
         </label>
         <div className="mt-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -90,6 +111,8 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             type="email"
             required
             placeholder="tucorreo@usm.cl"
+            pattern=".*@usm\.cl$"
+            title="Debe ser un correo @usm.cl"
             className="block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.email}
             onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
@@ -109,7 +132,8 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             id="register-password"
             type="password"
             required
-            placeholder="Mínimo 6 caracteres"
+            minLength="8"
+            placeholder="Mínimo 8 caracteres"
             className="block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.password}
             onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
