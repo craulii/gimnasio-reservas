@@ -7,9 +7,9 @@ export async function DELETE(request) {
   const user = JSON.parse(userHeader);
   if (user.rol !== "admin") return new Response("Solo admin", { status: 403 });
 
-  const { email, bloque_horario, fecha } = await request.json();
+  const { email, bloque_horario, sede, fecha } = await request.json();
 
-  if (!email || !bloque_horario || !fecha) {
+  if (!email || !bloque_horario || !sede || !fecha) {
     return new Response("Faltan datos requeridos", { status: 400 });
   }
 
@@ -17,6 +17,7 @@ export async function DELETE(request) {
     console.log("=== CANCELANDO RESERVA ===");
     console.log("Email:", email);
     console.log("Bloque:", bloque_horario);
+    console.log("Sede:", sede);
     console.log("Fecha recibida:", fecha);
 
     let fechaFormateada = fecha;
@@ -29,8 +30,8 @@ export async function DELETE(request) {
     await pool.query("BEGIN");
 
     const [result] = await pool.query(
-      "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND DATE(fecha) = DATE(?)",
-      [email, bloque_horario, fechaFormateada]
+      "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND DATE(fecha) = DATE(?)",
+      [email, bloque_horario, sede, fechaFormateada]
     );
 
     console.log("Reservas eliminadas:", result.affectedRows);
@@ -39,8 +40,8 @@ export async function DELETE(request) {
       const fechaHoy = new Date().toISOString().split("T")[0];
       if (fechaFormateada === fechaHoy) {
         await pool.query(
-          "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND fecha = CURDATE()",
-          [bloque_horario]
+          "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
+          [bloque_horario, sede]
         );
 
         console.log("Contador de cupos actualizado");

@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import ApiService from '../services/api';
 
-export default function useCupos(user) {
+export default function useCupos(user, sede = null) {
   const [cupos, setCupos] = useState({});
   const [loading, setLoading] = useState(false);
 
   const fetchCupos = async () => {
     setLoading(true);
     try {
-      const { ok, data } = await ApiService.getCupos();
+      const { ok, data } = await ApiService.getCupos(sede);
       if (ok) {
         setCupos(data);
       }
@@ -23,7 +23,7 @@ export default function useCupos(user) {
     if (user) {
       fetchCupos();
     }
-  }, [user]);
+  }, [user, sede]);
 
   return { cupos, loading, fetchCupos };
 }

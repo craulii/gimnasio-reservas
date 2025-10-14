@@ -1,4 +1,4 @@
-export default function ReservaBloque({ bloque, reservas, cupoInfo, onCancelar }) {
+export default function ReservaBloque({ bloque, sede, reservas, cupoInfo, onCancelar }) {
   const totalReservas = Array.isArray(reservas) ? reservas.length : 0;
   const presentes = Array.isArray(reservas) ? reservas.filter((r) => r.asistio).length : 0;
   const cupo = cupoInfo || { total: 0, reservados: 0 };
@@ -12,7 +12,7 @@ export default function ReservaBloque({ bloque, reservas, cupoInfo, onCancelar }
               📅 Bloque {bloque}
             </h3>
             <p className="text-sm text-gray-600">
-              {totalReservas} reservas • {presentes} presentes • 
+              🏢 {sede} • {totalReservas} reservas • {presentes} presentes •
               {cupo.total - cupo.reservados} cupos libres
             </p>
           </div>
@@ -56,7 +56,7 @@ export default function ReservaBloque({ bloque, reservas, cupoInfo, onCancelar }
                       {reserva.asistio ? "✅ Presente" : "⏳ Pendiente"}
                     </span>
                     <button
-                      onClick={() => onCancelar(reserva.email, bloque, reserva.fecha)}
+                      onClick={() => onCancelar(reserva.email, bloque, sede, reserva.fecha)}
                       className="text-red-600 hover:text-red-800 hover:bg-red-50 p-1 rounded transition-colors"
                       title={`Cancelar reserva de ${reserva.nombre}`}
                     >
@@ -69,8 +69,8 @@ export default function ReservaBloque({ bloque, reservas, cupoInfo, onCancelar }
         </div>
       ) : (
         <div className="px-4 py-8 text-center text-gray-500">
-          <div className="text-4xl mb-2">📭</div>
-          <p>No hay reservas para este bloque</p>
+          <div className="text-4xl mb-2">🔭</div>
+          <p>No hay reservas para este bloque en {sede}</p>
         </div>
       )}
     </div>

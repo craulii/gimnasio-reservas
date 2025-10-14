@@ -2,8 +2,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 class ApiService {
   static authHeader(user) {
-    if (!user) return {};
+    if (!user || !user.username || !user.password) {
+      console.log("[authHeader] No hay usuario o credenciales");
+      return {};
+    }
     const token = btoa(`${user.username}:${user.password}`);
+    console.log("[authHeader] Generando header con token para:", user.username);
     return { Authorization: `Basic ${token}` };
   }
 
@@ -49,35 +53,62 @@ class ApiService {
   }
 
   // Cupos
-  static async getCupos() {
-    const res = await fetch(`${API_BASE}/api/cupos`);
+  static async getCupos(sede = null) {
+    let url = `${API_BASE}/api/cupos`;
+    if (sede) {
+      url += `?sede=${encodeURIComponent(sede)}`;
+    }
+    const res = await fetch(url);
     return { ok: res.ok, data: await res.json() };
   }
 
-  static async updateCupos(bloque, cantidad) {
+  static async updateCupos(bloque, sede, cantidad) {
     const res = await fetch(`${API_BASE}/api/cupos`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         ...this.adminHeader(),
       },
-      body: JSON.stringify({ bloque, cantidad }),
+      body: JSON.stringify({ bloque, sede, cantidad }),
     });
     return { ok: res.ok, data: await res.json() };
   }
 
   // Reservas
-  static async makeReserva(bloque_horario, user) {
-    const res = await fetch(`${API_BASE}/api/reservas`, {
-      method: "POST",
-      headers: {
+  static async makeReserva(bloque_horario, sede, user) {
+    try {
+      console.log("[makeReserva] Enviando reserva para bloque:", bloque_horario, "sede:", sede);
+      console.log("[makeReserva] Usuario:", user?.username);
+      
+      const headers = {
         "Content-Type": "application/json",
         ...this.authHeader(user),
-      },
-      body: JSON.stringify({ bloque_horario }),
-    });
-    const text = await res.text();
-    return { ok: res.ok, data: text };
+      };
+      
+      console.log("[makeReserva] Headers:", headers);
+      
+      const res = await fetch(`${API_BASE}/api/reservas`, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify({ bloque_horario, sede }),
+      });
+      
+      let data;
+      const contentType = res.headers.get("content-type");
+      
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        data = await res.text();
+      }
+      
+      console.log("[makeReserva] Respuesta:", res.status, data);
+      
+      return { ok: res.ok, data };
+    } catch (error) {
+      console.error("[makeReserva] Error:", error);
+      return { ok: false, data: "Error de conexión" };
+    }
   }
 
   static async getReservasPorBloque() {
@@ -90,7 +121,7 @@ class ApiService {
     return { ok: res.ok, data: await res.json() };
   }
 
-  static async cancelarReserva(email, bloque_horario, fecha) {
+  static async cancelarReserva(email, bloque_horario, sede, fecha) {
     let fechaFormateada = fecha;
     if (fecha instanceof Date) {
       fechaFormateada = fecha.toISOString().split("T")[0];
@@ -104,7 +135,7 @@ class ApiService {
         "Content-Type": "application/json",
         ...this.adminHeader(),
       },
-      body: JSON.stringify({ email, bloque_horario, fecha: fechaFormateada }),
+      body: JSON.stringify({ email, bloque_horario, sede, fecha: fechaFormateada }),
     });
     return { ok: res.ok, data: await res.json() };
   }
@@ -210,53 +241,6 @@ class ApiService {
       headers: this.adminHeader(),
     });
   }
-
-  static authHeader(user) {
-  if (!user || !user.username || !user.password) {
-    console.log("[authHeader] No hay usuario o credenciales");
-    return {};
-  }
-  const token = btoa(`${user.username}:${user.password}`);
-  console.log("[authHeader] Generando header con token para:", user.username);
-  return { Authorization: `Basic ${token}` };
 }
-
-static async makeReserva(bloque_horario, user) {
-  try {
-    console.log("[makeReserva] Enviando reserva para bloque:", bloque_horario);
-    console.log("[makeReserva] Usuario:", user?.username);
-    
-    const headers = {
-      "Content-Type": "application/json",
-      ...this.authHeader(user),
-    };
-    
-    console.log("[makeReserva] Headers:", headers);
-    
-    const res = await fetch(`${API_BASE}/api/reservas`, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify({ bloque_horario }),
-    });
-    
-    let data;
-    const contentType = res.headers.get("content-type");
-    
-    if (contentType && contentType.includes("application/json")) {
-      data = await res.json();
-    } else {
-      data = await res.text();
-    }
-    
-    console.log("[makeReserva] Respuesta:", res.status, data);
-    
-    return { ok: res.ok, data };
-  } catch (error) {
-    console.error("[makeReserva] Error:", error);
-    return { ok: false, data: "Error de conexión" };
-  }
-}
-}
-
 
 export default ApiService;

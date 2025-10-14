@@ -1,6 +1,6 @@
 import pool from "../../lib/db";
-import bcrypt from "bcrypt";
-// Función para parsear el header de autorización Basic
+import bcrypt from "bcrypt"; // o bcryptjs si usas ese
+
 function parseAuth(authHeader) {
   console.log("[parseAuth] Header recibido:", authHeader);
   
@@ -21,7 +21,6 @@ function parseAuth(authHeader) {
   }
 }
 
-// Función para autenticar usuario
 async function authenticate(email, password) {
   try {
     console.log("[authenticate] Autenticando:", email);
@@ -62,24 +61,26 @@ export async function POST(request) {
 
   if (user.is_admin !== 0) return new Response("Solo los alumnos pueden realizar reservas.", { status: 403 });
 
-  const { bloque_horario } = await request.json();
+  const { bloque_horario, sede } = await request.json();
+  
   if (!bloque_horario) return new Response("Debe seleccionar un bloque horario para reservar.", { status: 400 });
+  if (!sede) return new Response("Debe seleccionar una sede para reservar.", { status: 400 });
 
   try {
-    console.log(`[${new Date().toISOString()}] ${user.email} intenta reservar ${bloque_horario}`);
+    console.log(`[${new Date().toISOString()}] ${user.email} intenta reservar ${bloque_horario} en ${sede}`);
     
     const [cuposResult] = await pool.query(
-      'SELECT total, reservados FROM cupos WHERE bloque = ? AND fecha = CURDATE()', 
-      [bloque_horario]
+      'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
+      [bloque_horario, sede]
     );
     
     if (cuposResult.length === 0) {
-      return new Response("Bloque horario no disponible para hoy", { status: 404 });
+      return new Response(`Bloque horario no disponible para hoy en ${sede}`, { status: 404 });
     }
     
     const { total, reservados } = cuposResult[0];
     if (reservados >= total) {
-      return new Response("No hay cupos disponibles para este bloque hoy", { status: 400 });
+      return new Response(`No hay cupos disponibles para este bloque en ${sede} hoy`, { status: 400 });
     }
 
     const [reservasHoy] = await pool.query(
@@ -88,15 +89,15 @@ export async function POST(request) {
     );
     
     if (reservasHoy.length > 0) {
-      const tieneEnBloque = reservasHoy.some(r => r.bloque_horario === bloque_horario);
+      const tieneEnBloque = reservasHoy.some(r => r.bloque_horario === bloque_horario && r.sede === sede);
       if (tieneEnBloque) {
         return new Response(
-          `Ya tienes una reserva para el bloque ${bloque_horario} hoy. No puedes reservar más de una vez en el mismo bloque.`,
+          `Ya tienes una reserva para el bloque ${bloque_horario} en ${sede} hoy. No puedes reservar más de una vez en el mismo bloque y sede.`,
           { status: 400 }
         );
       } else {
         return new Response(
-          `Ya tienes una reserva para hoy en otro bloque. Solo puedes reservar una vez al día.`,
+          `Ya tienes una reserva para hoy en ${reservasHoy[0].sede}. Solo puedes reservar una vez al día.`,
           { status: 400 }
         );
       }
@@ -105,21 +106,21 @@ export async function POST(request) {
     await pool.query("BEGIN");
     
     await pool.query(
-      "INSERT INTO reservas (email, fecha, bloque_horario, asistio) VALUES (?, CURDATE(), ?, 0)",
-      [user.email, bloque_horario]
+      "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, CURDATE(), ?, ?, 0)",
+      [user.email, bloque_horario, sede]
     );
 
     await pool.query(
-      "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ? AND fecha = CURDATE()",
-      [bloque_horario]
+      "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
+      [bloque_horario, sede]
     );
 
     await pool.query("COMMIT");
 
-    console.log(`Reserva confirmada: ${user.email} -> ${bloque_horario} (${new Date().toISOString().split('T')[0]})`);
+    console.log(`Reserva confirmada: ${user.email} -> ${bloque_horario} en ${sede} (${new Date().toISOString().split('T')[0]})`);
 
     return new Response(
-      `Reserva realizada exitosamente para el bloque ${bloque_horario} de hoy. ¡Gracias!`,
+      `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ¡Gracias!`,
       { status: 201 }
     );
   } catch (error) {
@@ -162,24 +163,23 @@ export async function DELETE(request) {
   if (!user) return new Response("Credenciales inválidas", { status: 401 });
 
   try {
-    const { bloque_horario } = await request.json();
+    const { bloque_horario, sede } = await request.json();
     
     const [result] = await pool.query(
-      "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND fecha = CURDATE()",
-      [user.email, bloque_horario]
+      "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = CURDATE()",
+      [user.email, bloque_horario, sede]
     );
 
     if (result.affectedRows === 0) {
       return new Response("No se encontró la reserva", { status: 404 });
     }
 
-    // Actualizar el contador de cupos
     await pool.query(
-      "UPDATE cupos SET reservados = reservados - 1 WHERE bloque = ? AND fecha = CURDATE()",
-      [bloque_horario]
+      "UPDATE cupos SET reservados = reservados - 1 WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
+      [bloque_horario, sede]
     );
 
-    console.log(`[CANCELAR RESERVA] ${user.email} canceló el bloque ${bloque_horario}`);
+    console.log(`[CANCELAR RESERVA] ${user.email} canceló el bloque ${bloque_horario} en ${sede}`);
     
     return new Response("Reserva cancelada exitosamente", { status: 200 });
   } catch (error) {

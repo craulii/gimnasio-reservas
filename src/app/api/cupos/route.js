@@ -1,23 +1,40 @@
 import pool from '../../lib/db';
 
-export async function GET() {
+export async function GET(request) {
   try {
     console.log(`[${new Date().toISOString()}] Cargando cupos del día...`);
     
     await ejecutarMantenimientoSiEsNecesario();
     
-    const [rows] = await pool.query(`
-      SELECT bloque, total, reservados 
+    const { searchParams } = new URL(request.url);
+    const sede = searchParams.get('sede');
+
+    let query = `
+      SELECT bloque, sede, total, reservados 
       FROM cupos 
-      WHERE fecha = CURDATE() 
-      ORDER BY 
-        CAST(SUBSTRING_INDEX(bloque, '-', 1) AS UNSIGNED),
-        CAST(SUBSTRING_INDEX(bloque, '-', -1) AS UNSIGNED)
-    `);
+      WHERE fecha = CURDATE()
+    `;
+    let params = [];
+
+    if (sede) {
+      query += ' AND sede = ?';
+      params.push(sede);
+    }
+
+    query += ` ORDER BY 
+      CAST(SUBSTRING_INDEX(bloque, '-', 1) AS UNSIGNED),
+      CAST(SUBSTRING_INDEX(bloque, '-', -1) AS UNSIGNED),
+      sede
+    `;
+    
+    const [rows] = await pool.query(query, params);
     
     const cupos = {};
     for (const row of rows) {
-      cupos[row.bloque] = {
+      const key = `${row.bloque}-${row.sede}`;
+      cupos[key] = {
+        bloque: row.bloque,
+        sede: row.sede,
         total: row.total,
         reservados: row.reservados,
         disponibles: row.total - row.reservados
@@ -49,63 +66,68 @@ export async function PATCH(request) {
   const user = JSON.parse(userHeader);
   if (user.rol !== 'admin') return new Response('Solo admin puede modificar cupos', { status: 403 });
 
-  const { bloque, cantidad } = await request.json();
-  if (!bloque || typeof cantidad !== 'number') {
-    return new Response('Datos inválidos', { status: 400 });
+  const { bloque, sede, cantidad } = await request.json();
+  if (!bloque || !sede || typeof cantidad !== 'number') {
+    return new Response('Datos inválidos (se requiere bloque, sede y cantidad)', { status: 400 });
   }
 
   try {
-    console.log(`[${new Date().toISOString()}] Admin modificando cupos: ${bloque} ${cantidad > 0 ? '+' : ''}${cantidad}`);
+    console.log(`[${new Date().toISOString()}] Admin modificando cupos: ${bloque} en ${sede} a ${cantidad}`);
     
     await ejecutarMantenimientoSiEsNecesario();
     
     const [rows] = await pool.query(
-      'SELECT total, reservados FROM cupos WHERE bloque = ? AND fecha = CURDATE()', 
-      [bloque]
+      'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
+      [bloque, sede]
     );
 
     if (rows.length === 0) {
-      return new Response('Bloque no encontrado para hoy', { status: 404 });
+      return new Response(`Bloque ${bloque} en ${sede} no encontrado para hoy`, { status: 404 });
     }
 
-    let nuevoTotal = rows[0].total + cantidad;
-    if (nuevoTotal < 0) nuevoTotal = 0;
+    if (cantidad < 0) {
+      return new Response('La cantidad no puede ser negativa', { status: 400 });
+    }
     
-    if (nuevoTotal < rows[0].reservados) {
+    if (cantidad < rows[0].reservados) {
       return new Response(
-        `No se puede reducir a ${nuevoTotal}. Hay ${rows[0].reservados} reservas activas hoy.`, 
+        `No se puede reducir a ${cantidad}. Hay ${rows[0].reservados} reservas activas hoy en ${sede}.`, 
         { status: 400 }
       );
     }
 
     await pool.query(
-      'UPDATE cupos SET total = ? WHERE bloque = ? AND fecha = CURDATE()', 
-      [nuevoTotal, bloque]
+      'UPDATE cupos SET total = ? WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
+      [cantidad, bloque, sede]
     );
 
     const [allRows] = await pool.query(`
-      SELECT bloque, total, reservados 
+      SELECT bloque, sede, total, reservados 
       FROM cupos 
       WHERE fecha = CURDATE() 
       ORDER BY 
         CAST(SUBSTRING_INDEX(bloque, '-', 1) AS UNSIGNED),
-        CAST(SUBSTRING_INDEX(bloque, '-', -1) AS UNSIGNED)
+        CAST(SUBSTRING_INDEX(bloque, '-', -1) AS UNSIGNED),
+        sede
     `);
     
     const cupos = {};
     for (const row of allRows) {
-      cupos[row.bloque] = {
+      const key = `${row.bloque}-${row.sede}`;
+      cupos[key] = {
+        bloque: row.bloque,
+        sede: row.sede,
         total: row.total,
         reservados: row.reservados,
         disponibles: row.total - row.reservados
       };
     }
 
-    console.log(`Cupos actualizados: ${bloque} = ${nuevoTotal}`);
+    console.log(`Cupos actualizados: ${bloque} en ${sede} = ${cantidad}`);
 
     return new Response(
       JSON.stringify({ 
-        message: `Cupos de ${bloque} actualizados a ${nuevoTotal}`, 
+        message: `Cupos de ${bloque} en ${sede} actualizados a ${cantidad}`, 
         cupos 
       }),
       {

@@ -12,11 +12,11 @@ export async function GET(request) {
     console.log("Usuario que hace petición:", user);
 
     const query = `
-      SELECT r.bloque_horario, r.fecha, u.name, r.email, r.asistio 
+      SELECT r.bloque_horario, r.sede, r.fecha, u.name, r.email, r.asistio 
       FROM reservas r 
       LEFT JOIN users u ON r.email = u.email 
       WHERE r.fecha = CURDATE()
-      ORDER BY r.bloque_horario, u.name
+      ORDER BY r.sede, r.bloque_horario, u.name
     `;
 
     console.log("Ejecutando query para HOY (CURDATE())");
@@ -33,6 +33,7 @@ export async function GET(request) {
       reservasPorBloque[row.bloque_horario].push({
         nombre: row.name,
         email: row.email,
+        sede: row.sede,
         asistio: row.asistio,
         fecha: row.fecha,
       });

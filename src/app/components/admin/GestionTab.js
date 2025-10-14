@@ -5,31 +5,44 @@ import ApiService from "../../services/api";
 
 export default function GestionTab({ cupos, setMessage, fetchCupos }) {
   const [bloque, setBloque] = useState(null);
+  const [sede, setSede] = useState("Vitacura");
   const [asistenciaUser, setAsistenciaUser] = useState("");
   const [asistenciaBloque, setAsistenciaBloque] = useState(null);
+  const [asistenciaSede, setAsistenciaSede] = useState("Vitacura");
   const [asistenciaPresente, setAsistenciaPresente] = useState(true);
 
   useEffect(() => {
-    const bloques = Object.keys(cupos);
-    if (bloques.length > 0) {
-      if (!bloque || !bloques.includes(bloque)) {
-        setBloque(bloques[0]);
+    const keys = Object.keys(cupos);
+    if (keys.length > 0) {
+      const firstCupo = cupos[keys[0]];
+      if (!bloque) {
+        setBloque(firstCupo.bloque);
+        setSede(firstCupo.sede);
       }
-      if (!asistenciaBloque || !bloques.includes(asistenciaBloque)) {
-        setAsistenciaBloque(bloques[0]);
+      if (!asistenciaBloque) {
+        setAsistenciaBloque(firstCupo.bloque);
+        setAsistenciaSede(firstCupo.sede);
       }
     }
   }, [cupos]);
 
   const modificarCupos = async (cantidad) => {
-    if (!bloque) {
-      setMessage("Selecciona un bloque primero");
+    if (!bloque || !sede) {
+      setMessage("Selecciona un bloque y sede primero");
       return;
     }
 
     setMessage("Actualizando cupos...");
     try {
-      const { ok, data } = await ApiService.updateCupos(bloque, cantidad);
+      const cupoActual = Object.values(cupos).find(c => c.bloque === bloque && c.sede === sede);
+      const nuevoTotal = (cupoActual?.total || 0) + cantidad;
+      
+      if (nuevoTotal < 0) {
+        setMessage("No puedes tener cupos negativos");
+        return;
+      }
+
+      const { ok, data } = await ApiService.updateCupos(bloque, sede, nuevoTotal);
       if (ok) {
         await fetchCupos();
         setMessage(data.message || "Cupos actualizados");
@@ -42,7 +55,7 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
   };
 
   const marcarAsistencia = async () => {
-    if (!asistenciaUser || !asistenciaBloque) {
+    if (!asistenciaUser || !asistenciaBloque || !asistenciaSede) {
       setMessage("Completa todos los campos");
       return;
     }
@@ -66,22 +79,60 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
     }
   };
 
+  // Agrupar cupos por sede
+  const cuposPorSede = Object.values(cupos).reduce((acc, cupo) => {
+    if (!acc[cupo.sede]) acc[cupo.sede] = [];
+    acc[cupo.sede].push(cupo);
+    return acc;
+  }, {});
+
+  const cuposSedeSeleccionada = cuposPorSede[sede] || [];
+  const cuposAsistenciaSedeSeleccionada = cuposPorSede[asistenciaSede] || [];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="bg-gray-100 p-4 rounded-lg">
         <h2 className="text-lg font-medium text-gray-800 mb-3">
           Gestión de cupos
         </h2>
+        
+        {/* Selector de Sede */}
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-800 mb-2">Sede:</label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSede("Vitacura")}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium ${
+                sede === "Vitacura"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              🏢 Vitacura
+            </button>
+            <button
+              onClick={() => setSede("San Joaquín")}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium ${
+                sede === "San Joaquín"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              🏫 San Joaquín
+            </button>
+          </div>
+        </div>
+
         <div className="flex space-x-2 mb-3">
           <select
             onChange={(e) => setBloque(e.target.value)}
             value={bloque || ""}
             className="text-gray-800 flex-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
           >
-            {Object.keys(cupos).map((b) => (
-              <option key={b} value={b} className="text-gray-800">
-                Bloque {b} - Total: {cupos[b].total} | Reservados: {cupos[b].reservados} | 
-                Disponibles: {cupos[b].total - cupos[b].reservados}
+            {cuposSedeSeleccionada.map((cupo) => (
+              <option key={`${cupo.bloque}-${cupo.sede}`} value={cupo.bloque} className="text-gray-800">
+                Bloque {cupo.bloque} - Total: {cupo.total} | Reservados: {cupo.reservados} | 
+                Disponibles: {cupo.total - cupo.reservados}
               </option>
             ))}
           </select>
@@ -121,6 +172,33 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
             />
           </div>
 
+          {/* Selector de Sede para Asistencia */}
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-2">Sede:</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAsistenciaSede("Vitacura")}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium ${
+                  asistenciaSede === "Vitacura"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                Vitacura
+              </button>
+              <button
+                onClick={() => setAsistenciaSede("San Joaquín")}
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium ${
+                  asistenciaSede === "San Joaquín"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                San Joaquín
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-800">
               Bloque horario
@@ -130,9 +208,9 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
               value={asistenciaBloque || ""}
               className="text-gray-800 mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
             >
-              {Object.keys(cupos).map((b) => (
-                <option key={b} value={b} className="text-gray-800">
-                  Bloque {b}
+              {cuposAsistenciaSedeSeleccionada.map((cupo) => (
+                <option key={`${cupo.bloque}-${cupo.sede}`} value={cupo.bloque} className="text-gray-800">
+                  Bloque {cupo.bloque}
                 </option>
               ))}
             </select>
