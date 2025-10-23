@@ -13,9 +13,9 @@ export default function EstadisticasTab({ cupos, setMessage }) {
   const [loading, setLoading] = useState(false);
 
   const tabs = [
-    { id: "general", label: "📊 General", desc: "Vista global del gimnasio" },
-    { id: "alumno", label: "👤 Por Alumno", desc: "Estadísticas individuales" },
-    { id: "bloque", label: "🕐 Por Bloque", desc: "Análisis de horarios" },
+    { id: "general", label: "General", desc: "Vista global del gimnasio" },
+    { id: "alumno", label: "Por Alumno", desc: "Estadísticas individuales" },
+    { id: "bloque", label: "Por Bloque", desc: "Análisis de horarios" },
   ];
 
   return (

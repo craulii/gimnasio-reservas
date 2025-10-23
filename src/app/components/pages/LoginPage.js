@@ -13,7 +13,7 @@ export default function LoginPage({ setUser, message, setMessage }) {
           <div className="text-center">
             <img src="/usm.png" alt="USM" className="mx-auto h-26 w-30" />
             <h1 className="mt-2 text-3xl font-extrabold text-white">
-              BetterGym USM
+              Sistema de Reservas GYM USM
             </h1>
             <p className="mt-1 text-sm font-bold text-yellow-800">
               ¡Potencia tu entrenamiento con Defider!

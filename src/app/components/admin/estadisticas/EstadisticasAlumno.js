@@ -53,13 +53,13 @@ export default function EstadisticasAlumno({ fechaInicio, fechaFin, setMessage, 
             disabled={!emailAlumno}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:bg-gray-400"
           >
-            👤 Analizar Alumno
+            Analizar Alumno
           </button>
           <button
             onClick={limpiarEstadisticas}
             className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
           >
-            🗑️ Limpiar
+            Limpiar
           </button>
         </div>
       </div>

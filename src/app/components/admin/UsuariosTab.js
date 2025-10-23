@@ -38,13 +38,13 @@ export default function UsuariosTab({ setMessage }) {
     try {
       const { ok, data } = await ApiService.deleteUsuario(email);
       if (ok) {
-        setMessage(`✅ ${data.message}`);
+        setMessage(`${data.message}`);
         cargarUsuarios();
       } else {
-        setMessage("❌ Error al eliminar usuario");
+        setMessage("Error al eliminar usuario");
       }
     } catch (error) {
-      setMessage("❌ Error de conexión");
+      setMessage("Error de conexión");
     }
   };
 
@@ -88,7 +88,7 @@ export default function UsuariosTab({ setMessage }) {
               onClick={cargarUsuarios}
               className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
             >
-              🔍 Buscar
+              Buscar
             </button>
           </div>
         </div>
@@ -131,11 +131,11 @@ export default function UsuariosTab({ setMessage }) {
                       </div>
                       <p className="text-sm text-gray-500">{usuario.email}</p>
                       <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
-                        <span>📅 {usuario.total_reservas} reservas</span>
-                        <span>✅ {usuario.total_asistencias} asistencias</span>
+                        <span>{usuario.total_reservas} reservas</span>
+                        <span>{usuario.total_asistencias} asistencias</span>
                         {usuario.total_reservas > 0 && (
                           <span>
-                            📊 {Math.round((usuario.total_asistencias / usuario.total_reservas) * 100)}% asistencia
+                            {Math.round((usuario.total_asistencias / usuario.total_reservas) * 100)}% asistencia
                           </span>
                         )}
                       </div>
@@ -146,13 +146,13 @@ export default function UsuariosTab({ setMessage }) {
                       onClick={() => abrirEditarUsuario(usuario)}
                       className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
                     >
-                      ✏️ Editar
+                      Editar
                     </button>
                     <button
                       onClick={() => eliminarUsuario(usuario.email, usuario.name)}
                       className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm"
                     >
-                      🗑️ Eliminar
+                      Eliminar
                     </button>
                   </div>
                 </div>

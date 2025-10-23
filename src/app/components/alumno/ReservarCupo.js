@@ -71,7 +71,7 @@ const hacerReserva = async (bloque, sede) => {
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}
           >
-            🏢 Vitacura
+            Vitacura
           </button>
           <button
             onClick={() => setSedeSeleccionada("San Joaquín")}
@@ -81,7 +81,7 @@ const hacerReserva = async (bloque, sede) => {
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}
           >
-            🏫 San Joaquín
+            San Joaquín
           </button>
         </div>
       </div>

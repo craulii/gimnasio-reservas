@@ -82,7 +82,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
             disabled={loading}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:bg-gray-400"
           >
-            {loading ? "Cargando..." : "🔄 Refrescar"}
+            {loading ? "Cargando..." : "Refrescar"}
           </button>
         </div>
 
@@ -96,7 +96,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}
           >
-            🏢 Vitacura
+            Vitacura
           </button>
           <button
             onClick={() => setSedeSeleccionada("San Joaquín")}
@@ -106,7 +106,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}
           >
-            🏫 San Joaquín
+            San Joaquín
           </button>
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="text-sm font-medium text-blue-900 mb-2">
-              📊 Resumen del día - {sedeSeleccionada}
+              Resumen del día - {sedeSeleccionada}
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>

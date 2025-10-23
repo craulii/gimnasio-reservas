@@ -62,13 +62,13 @@ export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMe
             disabled={!bloqueSeleccionado}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:bg-gray-400"
           >
-            🕐 Analizar Bloque
+            Analizar Bloque
           </button>
           <button
             onClick={limpiarEstadisticas}
             className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
           >
-            🗑️ Limpiar
+            Limpiar
           </button>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMe
           {/* Header */}
           <div className="bg-white border rounded-lg p-6">
             <h3 className="text-xl font-bold text-gray-900">
-              🕐 Análisis del Bloque {estadisticasBloque.bloque}
+              Análisis del Bloque {estadisticasBloque.bloque}
             </h3>
           </div>
 
@@ -116,7 +116,7 @@ export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMe
           {estadisticasBloque.datosPorDia && estadisticasBloque.datosPorDia.length > 0 && (
             <div className="bg-white border rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-3">
-                📊 Reservas por día (últimos 30 días)
+                Reservas por día (últimos 30 días)
               </h4>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {estadisticasBloque.datosPorDia.map((dia, idx) => (
@@ -147,7 +147,7 @@ export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMe
           {estadisticasBloque.alumnosFrecuentes && estadisticasBloque.alumnosFrecuentes.length > 0 && (
             <div className="bg-white border rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-3">
-                👥 Alumnos más frecuentes en este bloque
+                Alumnos más frecuentes en este bloque
               </h4>
               <div className="space-y-2">
                 {estadisticasBloque.alumnosFrecuentes.slice(0, 5).map((alumno, idx) => (

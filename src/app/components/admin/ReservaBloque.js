@@ -9,7 +9,7 @@ export default function ReservaBloque({ bloque, sede, reservas, cupoInfo, onCanc
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-medium text-gray-900">
-              📅 Bloque {bloque}
+              Bloque {bloque}
             </h3>
             <p className="text-sm text-gray-600">
               🏢 {sede} • {totalReservas} reservas • {presentes} presentes •
@@ -53,7 +53,7 @@ export default function ReservaBloque({ bloque, sede, reservas, cupoInfo, onCanc
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       reserva.asistio ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
                     }`}>
-                      {reserva.asistio ? "✅ Presente" : "⏳ Pendiente"}
+                      {reserva.asistio ? "Presente" : "Pendiente"}
                     </span>
                     <button
                       onClick={() => onCancelar(reserva.email, bloque, sede, reserva.fecha)}

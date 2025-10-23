@@ -46,12 +46,12 @@ export default function ExportarDatos({ setMessage }) {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(downloadUrl);
 
-        setMessage("✅ Archivo CSV descargado exitosamente");
+        setMessage("Archivo CSV descargado exitosamente");
       } else {
-        setMessage("❌ Error al exportar datos");
+        setMessage("Error al exportar datos");
       }
     } catch (error) {
-      setMessage("❌ Error de conexión al exportar");
+      setMessage("Error de conexión al exportar");
     } finally {
       setLoading(false);
     }
@@ -80,17 +80,17 @@ export default function ExportarDatos({ setMessage }) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            📅 Mes a exportar
+            Mes a exportar
           </label>
           <select
             value={mesSeleccionado}
             onChange={(e) => setMesSeleccionado(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
           >
-            <option value="">📊 Últimos 3 meses</option>
+            <option value="">Últimos 3 meses</option>
             {mesesDisponibles.map((mes) => (
               <option key={mes.mes} value={mes.mes}>
-                📆 {mes.mes} ({mes.total_reservas} reservas)
+                {mes.mes} ({mes.total_reservas} reservas)
               </option>
             ))}
           </select>
@@ -98,7 +98,7 @@ export default function ExportarDatos({ setMessage }) {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            📋 Tipo de reporte
+            Tipo de reporte
           </label>
           <select
             value={tipoExportacion}
@@ -132,7 +132,6 @@ export default function ExportarDatos({ setMessage }) {
               </>
             ) : (
               <>
-                <span>📥</span>
                 <span>Descargar CSV</span>
               </>
             )}

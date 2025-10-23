@@ -28,13 +28,13 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
       const { ok } = await ApiService.updateUsuario(usuario.email, formUsuario);
       
       if (ok) {
-        setMessage("✅ Usuario actualizado exitosamente");
+        setMessage("Usuario actualizado exitosamente");
         onSave();
       } else {
-        setMessage("❌ Error al actualizar usuario");
+        setMessage("Error al actualizar usuario");
       }
     } catch (error) {
-      setMessage("❌ Error de conexión");
+      setMessage("Error de conexión");
     }
   };
 
@@ -42,7 +42,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-medium text-gray-900 mb-4">
-          ✏️ Editar Usuario
+          Editar Usuario
         </h3>
 
         <div className="space-y-4">
@@ -91,7 +91,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
             />
             <label className="ml-2 block text-sm text-gray-700">
-              👑 Es administrador
+              Es administrador
             </label>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
             onClick={guardarUsuario}
             className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
           >
-            💾 Guardar
+            Guardar
           </button>
         </div>
       </div>

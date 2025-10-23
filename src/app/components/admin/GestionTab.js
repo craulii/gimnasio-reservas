@@ -108,7 +108,7 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
                   : "bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
-              🏢 Vitacura
+              Vitacura
             </button>
             <button
               onClick={() => setSede("San Joaquín")}
@@ -118,7 +118,7 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
                   : "bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
-              🏫 San Joaquín
+              San Joaquín
             </button>
           </div>
         </div>

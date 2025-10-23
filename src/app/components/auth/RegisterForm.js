@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FiUser, FiLock } from "react-icons/fi";
+import { FiUser, FiLock, FiAlertCircle } from "react-icons/fi";
 import ApiService from "../../services/api";
 
 export default function RegisterForm({ setMessage, setIsRegistering }) {
@@ -11,22 +11,53 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
     confirmPassword: "",
     rol: "",
   });
+  
+  const [passwordError, setPasswordError] = useState("");
+
+  const validarPassword = (password) => {
+    // Solo letras, números y caracteres básicos permitidos
+    const regex = /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:,.<>?]*$/;
+    return regex.test(password);
+  };
+
+  const handlePasswordChange = (e) => {
+    const newPassword = e.target.value;
+    
+    // Verificar si tiene caracteres no válidos
+    if (!validarPassword(newPassword)) {
+      setPasswordError("Carácter no válido detectado. Solo se permiten letras (a-z, A-Z), números (0-9) y símbolos básicos (!@#$%^&*)");
+    } else if (newPassword.length > 0 && newPassword.length < 8) {
+      setPasswordError("Mínimo 8 caracteres");
+    } else {
+      setPasswordError("");
+    }
+    
+    setRegisterData({ ...registerData, password: newPassword });
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setMessage("Creando cuenta...");
 
-    // Validaciones del lado del cliente
+    // Validación de contraseñas coinciden
     if (registerData.password !== registerData.confirmPassword) {
       setMessage("Las contraseñas no coinciden");
       return;
     }
 
+    // Validación de longitud
     if (registerData.password.length < 8) {
       setMessage("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
+    // Validación de caracteres permitidos
+    if (!validarPassword(registerData.password)) {
+      setMessage("La contraseña contiene caracteres no válidos. Solo se permiten letras (a-z, A-Z), números (0-9) y símbolos básicos (!@#$%^&*)");
+      return;
+    }
+
+    // Validación del rol
     const rolRegex = /^\d{9}-\d{1}$/;
     if (!rolRegex.test(registerData.rol)) {
       setMessage("El formato del rol debe ser: 123456789-0");
@@ -45,6 +76,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
           confirmPassword: "",
           rol: "",
         });
+        setPasswordError("");
         setTimeout(() => {
           setIsRegistering(false);
         }, 2000);
@@ -133,12 +165,31 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             type="password"
             required
             minLength="8"
-            placeholder="Mínimo 8 caracteres"
-            className="block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+            placeholder="Mínimo 8 caracteres (sin ñ ni tildes)"
+            className={`block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border rounded-md focus:outline-none focus:ring-2 sm:text-sm ${
+              passwordError 
+                ? "border-red-500 focus:ring-red-400 focus:border-red-400" 
+                : "border-gray-600 focus:ring-green-400 focus:border-green-400"
+            }`}
             value={registerData.password}
-            onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+            onChange={handlePasswordChange}
           />
         </div>
+        
+        {/* Mensaje de error en tiempo real */}
+        {passwordError && (
+          <div className="mt-2 flex items-start space-x-2 text-red-400 bg-red-900/20 border border-red-500/50 rounded-md p-2">
+            <FiAlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <p className="text-xs">{passwordError}</p>
+          </div>
+        )}
+        
+        {/* Mensaje de ayuda cuando no hay error */}
+        {!passwordError && (
+          <p className="mt-1 text-xs text-yellow-700">
+            Solo letras (a-z, A-Z), números (0-9) y símbolos básicos (!@#$%^&*)
+          </p>
+        )}
       </div>
 
       <div>
@@ -163,7 +214,12 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
 
       <button
         type="submit"
-        className="w-full flex items-center justify-center py-2 px-4 bg-yellow-500 hover:bg-yellow-600 text-white font-bold rounded-md shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
+        disabled={passwordError !== ""}
+        className={`w-full flex items-center justify-center py-2 px-4 font-bold rounded-md shadow-lg transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+          passwordError 
+            ? "bg-gray-500 cursor-not-allowed text-gray-300" 
+            : "bg-yellow-500 hover:bg-yellow-600 text-white focus:ring-green-400"
+        }`}
       >
         <FiUser className="mr-2 h-5 w-5" />
         Crear cuenta
