@@ -1,6 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
-import ApiService from "../../services/api";
+import { useState } from "react";
 import EstadisticasGeneral from "./estadisticas/EstadisticasGeneral";
 import EstadisticasAlumno from "./estadisticas/EstadisticasAlumno";
 import EstadisticasBloque from "./estadisticas/EstadisticasBloque";
@@ -28,7 +27,7 @@ export default function EstadisticasTab({ cupos, setMessage }) {
               onClick={() => setTipoEstadistica(tipo.id)}
               className={`flex-1 p-3 rounded-lg text-left transition-colors ${
                 tipoEstadistica === tipo.id
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-indigo-600 text-white shadow-lg"
                   : "bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
@@ -38,7 +37,7 @@ export default function EstadisticasTab({ cupos, setMessage }) {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Fecha inicio
@@ -64,12 +63,14 @@ export default function EstadisticasTab({ cupos, setMessage }) {
         </div>
       </div>
 
-      {loading ? (
+      {loading && (
         <div className="text-center py-8 bg-white rounded-lg">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
           <p className="text-gray-500">Cargando...</p>
         </div>
-      ) : (
+      )}
+
+      {!loading && (
         <>
           {tipoEstadistica === "general" && (
             <EstadisticasGeneral 

@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Gimanasio USM",
+  title: "Gimnasio USM",
   description: "Utfsm - gym web",
 };
 
