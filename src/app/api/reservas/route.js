@@ -25,8 +25,9 @@ async function authenticate(email, password) {
   try {
     console.log("[authenticate] Autenticando:", email);
     
+    // *** MODIFICADO: Agregados campos faltas y baneado ***
     const [rows] = await pool.query(
-      "SELECT email, password, name, rol, is_admin FROM users WHERE email = ? LIMIT 1",
+      "SELECT email, password, name, rol, is_admin, faltas, baneado FROM users WHERE email = ? LIMIT 1",
       [email]
     );
 
@@ -60,6 +61,26 @@ export async function POST(request) {
   if (!user) return new Response("Acceso no autorizado. Usuario o contraseña incorrectos.", { status: 401 });
 
   if (user.is_admin !== 0) return new Response("Solo los alumnos pueden realizar reservas.", { status: 403 });
+
+  // *** NUEVA VALIDACIÓN: Verificar si el usuario está baneado ***
+  if (user.baneado === 1) {
+    return new Response(
+      JSON.stringify({
+        message: `Tu cuenta está suspendida por acumular ${user.faltas} faltas (no asistencias). Contacta al administrador del gimnasio para más información.`,
+        baneado: true,
+        faltas: user.faltas
+      }),
+      { 
+        status: 403,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+
+  // *** OPCIONAL: Advertencia si tiene 2 faltas ***
+  if (user.faltas >= 2 && user.faltas < 3) {
+    console.warn(`[ADVERTENCIA] ${user.email} tiene ${user.faltas} faltas. Una más y será baneado.`);
+  }
 
   const { bloque_horario, sede } = await request.json();
   
@@ -119,9 +140,22 @@ export async function POST(request) {
 
     console.log(`Reserva confirmada: ${user.email} -> ${bloque_horario} en ${sede} (${new Date().toISOString().split('T')[0]})`);
 
+    // *** OPCIONAL: Devolver información de faltas en la respuesta ***
+    const responseMessage = user.faltas >= 2 
+      ? `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ⚠️ ADVERTENCIA: Tienes ${user.faltas} faltas. Una más y tu cuenta será suspendida.`
+      : `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ¡Gracias!`;
+
     return new Response(
-      `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ¡Gracias!`,
-      { status: 201 }
+      JSON.stringify({
+        message: responseMessage,
+        faltas: user.faltas,
+        bloque: bloque_horario,
+        sede: sede
+      }),
+      { 
+        status: 201,
+        headers: { "Content-Type": "application/json" }
+      }
     );
   } catch (error) {
     await pool.query("ROLLBACK");
@@ -144,7 +178,16 @@ export async function GET(request) {
       [user.email]
     );
 
-    return new Response(JSON.stringify(reservas), {
+    // *** MODIFICADO: Incluir información de faltas del usuario ***
+    return new Response(JSON.stringify({
+      reservas: reservas,
+      usuario: {
+        email: user.email,
+        name: user.name,
+        faltas: user.faltas,
+        baneado: user.baneado
+      }
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json" }
     });

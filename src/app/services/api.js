@@ -241,6 +241,44 @@ class ApiService {
       headers: this.adminHeader(),
     });
   }
+
+    // Asistencia Masiva
+  static async getUsuariosBloque(bloque, sede, fecha) {
+    const fechaParam = fecha || new Date().toISOString().split('T')[0];
+    const res = await fetch(
+      `${API_BASE}/api/admin/asistencia-masiva?bloque=${bloque}&sede=${sede}&fecha=${fechaParam}`,
+      {
+        headers: this.adminHeader(),
+      }
+    );
+    return { ok: res.ok, data: await res.json() };
+  }
+
+  static async registrarAsistenciaMasiva(asistencias, bloque_horario, sede, fecha) {
+    const res = await fetch(`${API_BASE}/api/admin/asistencia-masiva`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.adminHeader(),
+      },
+      body: JSON.stringify({ asistencias, bloque_horario, sede, fecha }),
+    });
+    return { ok: res.ok, data: await res.json() };
+  }
+
+  // Gestión de baneo
+  static async desbanearUsuario(email) {
+    const res = await fetch(`${API_BASE}/api/admin/usuarios`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...this.adminHeader(),
+      },
+      body: JSON.stringify({ email, baneado: 0, faltas: 0 }),
+    });
+    return { ok: res.ok };
+  }
+
 }
 
 export default ApiService;

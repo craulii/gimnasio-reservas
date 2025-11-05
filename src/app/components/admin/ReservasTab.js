@@ -1,187 +1,170 @@
 "use client";
 import { useState, useEffect } from "react";
+import { FiX, FiRefreshCw } from "react-icons/fi";
 import ApiService from "../../services/api";
-import ReservaBloque from "./ReservaBloque";
 
 export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
   const [loading, setLoading] = useState(false);
-  const [reservasPorBloque, setReservasPorBloque] = useState({});
-  const [sedeSeleccionada, setSedeSeleccionada] = useState("Vitacura");
+  const [reservas, setReservas] = useState({});
+  const [expandido, setExpandido] = useState({});
 
   useEffect(() => {
-    cargarReservasPorBloque();
+    cargarReservas();
   }, []);
 
-  const cargarReservasPorBloque = async () => {
+  const cargarReservas = async () => {
     setLoading(true);
+    setMessage("Cargando reservas...");
     try {
       const { ok, data } = await ApiService.getReservasPorBloque();
       if (ok) {
-        setReservasPorBloque(data);
-        setMessage("");
+        setReservas(data);
+        setMessage(`${Object.keys(data).length} bloques con reservas`);
       } else {
         setMessage("Error al cargar reservas");
       }
     } catch (error) {
+      console.error("Error al cargar reservas:", error);
       setMessage("Error de conexión");
     } finally {
       setLoading(false);
     }
   };
 
-  const cancelarReserva = async (email, bloque_horario, sede, fecha) => {
-    if (!confirm(`¿Cancelar reserva de ${email} para ${bloque_horario} en ${sede}?`)) return;
+  const cancelarReserva = async (email, bloqueHorario, sede, fecha) => {
+    if (!confirm(`¿Cancelar reserva de ${email} en bloque ${bloqueHorario}?`)) return;
 
+    setMessage("Cancelando reserva...");
     try {
-      const { ok, data } = await ApiService.cancelarReserva(email, bloque_horario, sede, fecha);
-      
-      if (ok && data.cancelada) {
-        setMessage("Reserva cancelada exitosamente");
-        await cargarReservasPorBloque();
-        await fetchCupos();
+      const { ok, data } = await ApiService.cancelarReserva(
+        email,
+        bloqueHorario,
+        sede,
+        fecha
+      );
+      if (ok) {
+        setMessage(data.message || "✅ Reserva cancelada");
+        cargarReservas();
+        fetchCupos?.();
       } else {
-        setMessage("No se encontró la reserva para cancelar");
+        setMessage("❌ Error al cancelar");
       }
     } catch (error) {
-      setMessage("Error de conexión al cancelar reserva");
+      console.error("Error:", error);
+      setMessage("❌ Error de conexión");
     }
   };
 
-  // Filtrar reservas por sede
-  const reservasFiltradas = Object.entries(reservasPorBloque).filter(([key, reservas]) => {
-    return reservas.some(r => r.sede === sedeSeleccionada);
-  }).reduce((acc, [key, reservas]) => {
-    acc[key] = reservas.filter(r => r.sede === sedeSeleccionada);
-    return acc;
-  }, {});
+  const toggleBloque = (bloqueKey) => {
+    setExpandido(prev => ({
+      ...prev,
+      [bloqueKey]: !prev[bloqueKey]
+    }));
+  };
 
-  const totalReservas = Object.values(reservasFiltradas).flat().length;
-  const totalPresentes = Object.values(reservasFiltradas)
-    .flat()
-    .filter((r) => r.asistio).length;
+  const totalReservas = Object.values(reservas).reduce((acc, usuarios) => acc + usuarios.length, 0);
 
   return (
     <div className="space-y-4">
-      <div className="bg-gray-100 p-4 rounded-lg">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-medium text-gray-800">
-              Reservas de hoy - {new Date().toLocaleDateString("es-CL", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </h3>
-            <p className="text-sm text-gray-600">
-              {totalReservas} reservas en {sedeSeleccionada}
-            </p>
-          </div>
-          <button
-            onClick={cargarReservasPorBloque}
-            disabled={loading}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:bg-gray-400"
-          >
-            {loading ? "Cargando..." : "Refrescar"}
-          </button>
+      {/* Header con botón de refrescar */}
+      <div className="flex justify-between items-center bg-gray-100 p-4 rounded-lg">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">Reservas de Hoy</h2>
+          <p className="text-sm text-gray-600">
+            {totalReservas} reserva{totalReservas !== 1 ? 's' : ''} en {Object.keys(reservas).length} bloque{Object.keys(reservas).length !== 1 ? 's' : ''}
+          </p>
         </div>
-
-        {/* Selector de Sede */}
-        <div className="flex gap-3">
-          <button
-            onClick={() => setSedeSeleccionada("Vitacura")}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-              sedeSeleccionada === "Vitacura"
-                ? "bg-indigo-600 text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            Vitacura
-          </button>
-          <button
-            onClick={() => setSedeSeleccionada("San Joaquín")}
-            className={`flex-1 py-2 px-4 rounded-lg font-medium transition ${
-              sedeSeleccionada === "San Joaquín"
-                ? "bg-indigo-600 text-white shadow-lg"
-                : "bg-white text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            San Joaquín
-          </button>
-        </div>
+        <button
+          onClick={cargarReservas}
+          disabled={loading}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50"
+        >
+          <FiRefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? "Cargando..." : "Refrescar"}
+        </button>
       </div>
 
+      {/* Lista de reservas por bloque */}
       {loading ? (
-        <div className="text-center py-8 bg-white rounded-lg">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
-          <p className="text-gray-500">Cargando reservas de hoy...</p>
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <FiRefreshCw className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-2" />
+          <p className="text-gray-600">Cargando reservas...</p>
         </div>
-      ) : Object.keys(reservasFiltradas).length > 0 ? (
-        <>
-          <div className="space-y-4">
-            {Object.entries(reservasFiltradas)
-              .sort(([a], [b]) => {
-                const aNum = parseInt(a.split("-")[0]);
-                const bNum = parseInt(b.split("-")[0]);
-                return aNum - bNum;
-              })
-              .map(([bloque, reservas]) => {
-                // Encontrar el cupo correspondiente a este bloque y sede
-                const cupoKey = Object.keys(cupos).find(key => {
-                  const cupo = cupos[key];
-                  return cupo.bloque === bloque && cupo.sede === sedeSeleccionada;
-                });
-                
-                return (
-                  <ReservaBloque
-                    key={`${bloque}-${sedeSeleccionada}`}
-                    bloque={bloque}
-                    sede={sedeSeleccionada}
-                    reservas={reservas}
-                    cupoInfo={cupoKey ? cupos[cupoKey] : null}
-                    onCancelar={cancelarReserva}
-                  />
-                );
-              })}
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">
-              Resumen del día - {sedeSeleccionada}
-            </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-blue-600 font-medium">Bloques activos:</span>
-                <div className="text-blue-900 font-bold">
-                  {Object.keys(reservasFiltradas).length}
-                </div>
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">Total reservas:</span>
-                <div className="text-blue-900 font-bold">{totalReservas}</div>
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">Ya presentes:</span>
-                <div className="text-blue-900 font-bold">{totalPresentes}</div>
-              </div>
-              <div>
-                <span className="text-blue-600 font-medium">% Asistencia:</span>
-                <div className="text-blue-900 font-bold">
-                  {totalReservas > 0 ? Math.round((totalPresentes / totalReservas) * 100) : 0}%
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
+      ) : Object.keys(reservas).length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-lg">
+          <p className="text-gray-500 text-lg">No hay reservas para hoy</p>
+        </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-lg">
-          <div className="text-6xl mb-4">🏃‍♂️</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No hay reservas para hoy en {sedeSeleccionada}
-          </h3>
-          <p className="text-gray-500">
-            Los alumnos aún no han hecho reservas para el día de hoy en esta sede.
-          </p>
+        <div className="space-y-3">
+          {Object.entries(reservas).map(([bloqueKey, usuarios]) => {
+            const estaExpandido = expandido[bloqueKey];
+            const sede = usuarios[0]?.sede || "N/A";
+            
+            return (
+              <div key={bloqueKey} className="border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
+                {/* Header del bloque (clickeable para expandir/contraer) */}
+                <div
+                  onClick={() => toggleBloque(bloqueKey)}
+                  className="flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors"
+                >
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-800">
+                      Bloque {bloqueKey} - {sede}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {usuarios.length} alumno{usuarios.length !== 1 ? 's' : ''} inscrito{usuarios.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl text-gray-400">
+                      {estaExpandido ? "−" : "+"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Lista de usuarios (expandible) */}
+                {estaExpandido && (
+                  <div className="p-4 space-y-2 bg-white">
+                    {usuarios.map((user, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-800">{user.nombre}</p>
+                          <p className="text-sm text-gray-600">{user.email}</p>
+                          <div className="flex gap-3 mt-1">
+                            <p className="text-xs text-gray-500">
+                              📍 {user.sede}
+                            </p>
+                            <p className="text-xs">
+                              {user.asistio === 1 ? (
+                                <span className="text-green-600 font-medium">✅ Asistió</span>
+                              ) : user.asistio === 0 ? (
+                                <span className="text-red-600 font-medium">❌ No asistió</span>
+                              ) : (
+                                <span className="text-gray-500">⏳ Pendiente</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cancelarReserva(user.email, bloqueKey, user.sede, user.fecha);
+                          }}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Cancelar reserva"
+                        >
+                          <FiX className="text-xl" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
