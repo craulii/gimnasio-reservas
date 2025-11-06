@@ -16,12 +16,18 @@ export async function GET(request) {
     console.log("Fecha inicio:", fechaInicio);
     console.log("Fecha fin:", fechaFin);
 
+    // ========================================
+    // QUERY 1: ESTADÍSTICAS POR BLOQUE
+    // ========================================
     let queryBloques = `
       SELECT 
         bloque_horario,
         COUNT(*) as total_reservas,
-        SUM(asistio) as total_asistencias,
-        ROUND((SUM(asistio) / COUNT(*)) * 100, 2) as porcentaje_asistencia
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
+        ROUND(
+          (COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 
+          2
+        ) as porcentaje_asistencia
       FROM reservas 
       WHERE 1=1
     `;
@@ -37,51 +43,51 @@ export async function GET(request) {
     queryBloques += " GROUP BY bloque_horario ORDER BY bloque_horario";
 
     console.log("Query bloques:", queryBloques);
-    console.log("Parámetros:", params);
 
     const [estadisticasBloques] = await pool.query(queryBloques, params);
-    console.log(
-      "Estadísticas por bloque encontradas:",
-      estadisticasBloques.length
-    );
+    console.log("Estadísticas por bloque:", estadisticasBloques);
 
-    let queryAlumnos = `
+    // ========================================
+    // QUERY 2: ESTADÍSTICAS POR SEDE
+    // ========================================
+    let querySedes = `
       SELECT 
-        u.name,
-        u.email,
-        COUNT(r.id) as total_reservas,
-        SUM(r.asistio) as total_asistencias,
-        ROUND((SUM(r.asistio) / COUNT(r.id)) * 100, 2) as porcentaje_asistencia
-      FROM users u
-      LEFT JOIN reservas r ON u.email = r.email
-      WHERE u.is_admin = 0
+        sede,
+        COUNT(*) as total_reservas,
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
+        ROUND(
+          (COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 
+          2
+        ) as porcentaje_asistencia
+      FROM reservas 
+      WHERE 1=1
     `;
 
-    const paramsAlumnos = [];
+    const paramsSedes = [];
     if (fechaInicio && fechaFin) {
-      queryAlumnos += " AND (r.fecha IS NULL OR r.fecha BETWEEN ? AND ?)";
-      paramsAlumnos.push(fechaInicio, fechaFin);
+      querySedes += " AND fecha BETWEEN ? AND ?";
+      paramsSedes.push(fechaInicio, fechaFin);
     } else {
-      queryAlumnos +=
-        " AND (r.fecha IS NULL OR r.fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY))";
+      querySedes += " AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
     }
 
-    queryAlumnos += " GROUP BY u.email ORDER BY total_reservas DESC";
+    querySedes += " GROUP BY sede ORDER BY sede";
 
-    console.log("Query alumnos:", queryAlumnos);
+    const [estadisticasSedes] = await pool.query(querySedes, paramsSedes);
+    console.log("Estadísticas por sede:", estadisticasSedes);
 
-    const [estadisticasAlumnos] = await pool.query(queryAlumnos, paramsAlumnos);
-    console.log(
-      "Estadísticas de alumnos encontradas:",
-      estadisticasAlumnos.length
-    );
-
+    // ========================================
+    // QUERY 3: RESUMEN GENERAL
+    // ========================================
     let queryResumen = `
       SELECT 
-        COUNT(DISTINCT email) as total_alumnos_activos,
+        COUNT(DISTINCT email) as usuarios_unicos,
         COUNT(*) as total_reservas,
-        SUM(asistio) as total_asistencias,
-        ROUND((SUM(asistio) / COUNT(*)) * 100, 2) as porcentaje_asistencia_general
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
+        ROUND(
+          (COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 
+          2
+        ) as porcentaje_asistencia
       FROM reservas
       WHERE 1=1
     `;
@@ -94,23 +100,24 @@ export async function GET(request) {
       queryResumen += " AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
     }
 
-    console.log("Query resumen:", queryResumen);
-
     const [resumen] = await pool.query(queryResumen, paramsResumen);
     console.log("Resumen obtenido:", resumen[0]);
 
+    // ========================================
+    // CONSTRUIR RESPUESTA CON NOMBRES CORRECTOS
+    // ========================================
     const resultado = {
       resumen: resumen[0] || {
-        total_alumnos_activos: 0,
+        usuarios_unicos: 0,
         total_reservas: 0,
         total_asistencias: 0,
-        porcentaje_asistencia_general: 0,
+        porcentaje_asistencia: 0,
       },
-      estadisticasBloques: estadisticasBloques || [],
-      estadisticasAlumnos: estadisticasAlumnos || [],
+      por_bloque: estadisticasBloques || [],
+      por_sede: estadisticasSedes || [],
     };
 
-    console.log("RESULTADO FINAL:", resultado);
+    console.log("RESULTADO FINAL:", JSON.stringify(resultado, null, 2));
     console.log("=== FIN ESTADÍSTICAS ===");
 
     return new Response(JSON.stringify(resultado), {

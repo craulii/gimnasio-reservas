@@ -126,7 +126,7 @@ export default function UsuariosTab({ setMessage }) {
                             ? "bg-purple-100 text-purple-800"
                             : "bg-blue-100 text-blue-800"
                         }`}>
-                          {usuario.is_admin === 1 ? "👑 Admin" : "👤 Alumno"}
+                          {usuario.is_admin === 1 ? "Admin" : "Alumno"}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500">{usuario.email}</p>
