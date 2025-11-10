@@ -131,7 +131,7 @@ export async function GET(request) {
 
   try {
     const [rows] = await pool.query(
-      `SELECT r.email, u.name, r.asistio, u.faltas, u.baneado
+      `SELECT r.email, u.name, u.rol, r.asistio, u.faltas, u.baneado
        FROM reservas r
        LEFT JOIN users u ON r.email = u.email
        WHERE r.bloque_horario = ? AND r.sede = ? AND r.fecha = ?

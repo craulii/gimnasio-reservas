@@ -1,4 +1,5 @@
 import pool from "../../../lib/db";
+import { normalizarRut, validarRut } from "../../../lib/rut";
 
 export async function GET(request) {
   const userHeader = request.headers.get("x-user");
@@ -8,18 +9,17 @@ export async function GET(request) {
   if (user.rol !== "admin") return new Response("Solo admin", { status: 403 });
 
   const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search") || "";
+  const search = (searchParams.get("search") || "").trim();
   const tipo = searchParams.get("tipo") || "todos";
 
   try {
     let query = `
-      SELECT rol, name, email, is_admin,
+      SELECT rol, rut, name, email, is_admin,
         (SELECT COUNT(*) FROM reservas WHERE email = users.email) as total_reservas,
         (SELECT COUNT(*) FROM reservas WHERE email = users.email AND asistio = 1) as total_asistencias
-      FROM users 
+      FROM users
       WHERE 1=1
     `;
-
     const params = [];
 
     if (tipo === "alumnos") {
@@ -29,11 +29,11 @@ export async function GET(request) {
     }
 
     if (search) {
-      query += " AND (name LIKE ? OR email LIKE ?)";
-      params.push(`%${search}%`, `%${search}%`);
+      query += " AND (name LIKE ? OR email LIKE ? OR rut LIKE ? OR rol LIKE ?)";
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
 
-    query += " ORDER BY name";
+    query += " ORDER BY name ASC LIMIT 500";
 
     console.log("Query usuarios:", query);
     console.log("Parámetros:", params);
@@ -57,7 +57,7 @@ export async function PUT(request) {
   const user = JSON.parse(userHeader);
   if (user.rol !== "admin") return new Response("Solo admin", { status: 403 });
 
-  const { email, name, newEmail, password, isAdmin } = await request.json();
+  const { email, name, newEmail, password, isAdmin, rut, rol } = await request.json();
 
   if (!email || !name) {
     return new Response("Email y nombre son obligatorios", { status: 400 });
@@ -66,47 +66,78 @@ export async function PUT(request) {
   try {
     console.log(`[ADMIN] Actualizando usuario: ${email}`);
 
-    const [existingUser] = await pool.query(
-      "SELECT email FROM users WHERE email = ?",
-      [email]
-    );
+    // Verificar que el usuario existe
+    const [existingUser] = await pool.query("SELECT email FROM users WHERE email = ?", [email]);
     if (existingUser.length === 0) {
       return new Response("Usuario no encontrado", { status: 404 });
     }
 
+    // Si va a cambiar el email, verificar que no esté en uso
     if (newEmail && newEmail !== email) {
       const [duplicateCheck] = await pool.query(
         "SELECT email FROM users WHERE email = ?",
-        [newEmail]
+        [newEmail.toLowerCase().trim()]
       );
       if (duplicateCheck.length > 0) {
         return new Response("El nuevo email ya está en uso", { status: 409 });
       }
     }
 
-    let updateQuery = "UPDATE users SET name = ?, is_admin = ?";
+    // Construir query dinámico
+    let updateParts = ["name = ?", "is_admin = ?"];
     let updateParams = [name.trim(), isAdmin ? 1 : 0];
 
-    if (newEmail && newEmail !== email) {
-      updateQuery += ", email = ?";
-      updateParams.push(newEmail.toLowerCase().trim());
+    // Actualizar RUT si se proporciona
+    if (typeof rut === "string" && rut.trim() !== "") {
+      const rutNorm = normalizarRut(rut);
+      if (!validarRut(rutNorm)) {
+        return new Response("RUT inválido", { status: 400 });
+      }
+      // Verificar que no esté duplicado
+      const [dupRut] = await pool.query(
+        "SELECT email FROM users WHERE rut = ? AND email <> ?",
+        [rutNorm, email]
+      );
+      if (dupRut.length > 0) {
+        return new Response("RUT ya registrado por otro usuario", { status: 409 });
+      }
+      updateParts.push("rut = ?");
+      updateParams.push(rutNorm);
     }
 
+    // Actualizar rol institucional si se proporciona
+    if (typeof rol === "string" && rol.trim() !== "") {
+      const ROL_REGEX = /^\d{9}-\d{1}$/;
+      if (!ROL_REGEX.test(rol.trim())) {
+        return new Response("Rol institucional inválido", { status: 400 });
+      }
+      updateParts.push("rol = ?");
+      updateParams.push(rol.trim());
+    }
+
+    // Actualizar email si cambió
+    let changedEmail = null;
+    if (newEmail && newEmail !== email) {
+      updateParts.push("email = ?");
+      changedEmail = newEmail.toLowerCase().trim();
+      updateParams.push(changedEmail);
+    }
+
+    // Actualizar contraseña si se proporciona
     if (password && password.trim() !== "") {
-      updateQuery += ", password = ?";
+      updateParts.push("password = ?");
       updateParams.push(password);
     }
 
-    updateQuery += " WHERE email = ?";
+    // Ejecutar update
+    const updateQuery = `UPDATE users SET ${updateParts.join(", ")} WHERE email = ?`;
     updateParams.push(email);
 
     await pool.query(updateQuery, updateParams);
 
-    if (newEmail && newEmail !== email) {
-      await pool.query("UPDATE reservas SET email = ? WHERE email = ?", [
-        newEmail.toLowerCase().trim(),
-        email,
-      ]);
+    // Si cambió el email, actualizar también en reservas
+    if (changedEmail) {
+      await pool.query("UPDATE reservas SET email = ? WHERE email = ?", [changedEmail, email]);
     }
 
     console.log(`[ADMIN] Usuario actualizado exitosamente: ${email}`);
@@ -114,12 +145,9 @@ export async function PUT(request) {
     return new Response(
       JSON.stringify({
         message: "Usuario actualizado exitosamente",
-        updatedEmail: newEmail || email,
+        updatedEmail: changedEmail || email,
       }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error actualizando usuario:", error);
@@ -152,24 +180,15 @@ export async function DELETE(request) {
     }
 
     if (email === user.email) {
-      return new Response("No puedes eliminar tu propia cuenta", {
-        status: 400,
-      });
+      return new Response("No puedes eliminar tu propia cuenta", { status: 400 });
     }
 
     await pool.query("BEGIN");
 
-    const [reservasResult] = await pool.query(
-      "DELETE FROM reservas WHERE email = ?",
-      [email]
-    );
-    console.log(
-      `[ADMIN] Eliminadas ${reservasResult.affectedRows} reservas del usuario`
-    );
+    const [reservasResult] = await pool.query("DELETE FROM reservas WHERE email = ?", [email]);
+    console.log(`[ADMIN] Eliminadas ${reservasResult.affectedRows} reservas del usuario`);
 
-    const [userResult] = await pool.query("DELETE FROM users WHERE email = ?", [
-      email,
-    ]);
+    const [userResult] = await pool.query("DELETE FROM users WHERE email = ?", [email]);
 
     await pool.query("COMMIT");
 
@@ -184,10 +203,7 @@ export async function DELETE(request) {
         message: `Usuario ${email} eliminado exitosamente`,
         reservasEliminadas: reservasResult.affectedRows,
       }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     await pool.query("ROLLBACK");

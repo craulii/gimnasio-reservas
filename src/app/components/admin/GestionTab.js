@@ -399,6 +399,7 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
                   <div className="flex-1">
                     <p className="font-semibold text-gray-800">{user.name}</p>
                     <p className="text-sm text-gray-600">{user.email}</p>
+                    <p className="text-xs text-gray-400">Rol: {user.rol || "—"}</p>
                     {user.faltas > 0 && (
                       <p className="text-xs text-orange-600 mt-1">
                         ⚠️ {user.faltas} falta{user.faltas > 1 ? 's' : ''} acumulada{user.faltas > 1 ? 's' : ''}

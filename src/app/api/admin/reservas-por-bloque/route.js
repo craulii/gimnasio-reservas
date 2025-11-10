@@ -12,27 +12,29 @@ export async function GET(request) {
     console.log("Usuario que hace petición:", user);
 
     const query = `
-      SELECT r.bloque_horario, r.sede, r.fecha, u.name, r.email, r.asistio 
-      FROM reservas r 
-      LEFT JOIN users u ON r.email = u.email 
+      SELECT r.bloque_horario, r.sede, r.fecha, u.name, u.rol, r.email, r.asistio
+      FROM reservas r
+      LEFT JOIN users u ON r.email = u.email
       WHERE r.fecha = CURDATE()
       ORDER BY r.sede, r.bloque_horario, u.name
     `;
 
     console.log("Ejecutando query para HOY (CURDATE())");
-
     const [rows] = await pool.query(query);
     console.log("RESULTADOS encontrados:", rows.length);
     console.log("Datos:", rows);
 
     const reservasPorBloque = {};
+
     rows.forEach((row) => {
       if (!reservasPorBloque[row.bloque_horario]) {
         reservasPorBloque[row.bloque_horario] = [];
       }
+
       reservasPorBloque[row.bloque_horario].push({
         nombre: row.name,
         email: row.email,
+        rol: row.rol,  // ← AGREGADO
         sede: row.sede,
         asistio: row.asistio,
         fecha: row.fecha,

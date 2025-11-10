@@ -88,7 +88,7 @@ export default function EstadisticasAlumno({ fechaInicio, fechaFin, setMessage, 
           {estadisticasAlumno.alumno && (
             <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg p-6 text-white shadow-lg">
               <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-white bg-opacity-20 backdrop-blur rounded-full flex items-center justify-center">
+                <div className="w-20 h-20 bg-indigo-600 bg-opacity-20 backdrop-blur rounded-full flex items-center justify-center">
                   <span className="text-4xl font-bold">
                     {estadisticasAlumno.alumno.name?.charAt(0).toUpperCase() || "?"}
                   </span>

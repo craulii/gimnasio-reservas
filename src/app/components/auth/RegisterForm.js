@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { FiUser, FiLock, FiAlertCircle } from "react-icons/fi";
 import ApiService from "../../services/api";
+import { normalizarRut, validarRut } from "../../lib/rut";
 
 export default function RegisterForm({ setMessage, setIsRegistering }) {
   const [registerData, setRegisterData] = useState({
@@ -10,6 +11,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
     password: "",
     confirmPassword: "",
     rol: "",
+    rut: "",
   });
   
   const [passwordError, setPasswordError] = useState("");
@@ -64,8 +66,21 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
       return;
     }
 
+    // Normalizar y validar RUT antes de enviar
+    const rutNormalizado = normalizarRut(registerData.rut);
+    if (!validarRut(rutNormalizado)) {
+      setMessage("RUT inválido. Verifica el formato (ej: 12345678-9)");
+      return;
+    }
+
     try {
-      const { ok, data } = await ApiService.register(registerData);
+      // Enviar con RUT normalizado
+      const datosParaEnviar = {
+        ...registerData,
+        rut: rutNormalizado
+      };
+      
+      const { ok, data } = await ApiService.register(datosParaEnviar);
       
       if (ok) {
         setMessage(data.message || "¡Cuenta creada exitosamente! Ya puedes iniciar sesión.");
@@ -75,6 +90,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
           password: "",
           confirmPassword: "",
           rol: "",
+          rut: "",
         });
         setPasswordError("");
         setTimeout(() => {
@@ -128,6 +144,28 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             onChange={(e) => setRegisterData({ ...registerData, rol: e.target.value })}
           />
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="register-rut" className="block text-sm font-medium text-yellow-800">
+          RUT
+        </label>
+        <div className="mt-1 relative">
+          <input
+            id="register-rut"
+            type="text"
+            required
+            placeholder="12345678-9"
+            maxLength="10"
+            title="Formato: 12345678-9 (sin puntos, con guión)"
+            className="block w-full pl-3 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+            value={registerData.rut}
+            onChange={(e) => setRegisterData({ ...registerData, rut: e.target.value })}
+          />
+        </div>
+        <p className="mt-1 text-xs text-yellow-700">
+          Sin puntos, con guión (ej: 12345678-9)
+        </p>
       </div>
 
       <div>

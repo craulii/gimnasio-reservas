@@ -20,23 +20,21 @@ class ApiService {
     try {
       const res = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
         body: JSON.stringify(credentials),
       });
-
       const data = await res.json();
-      
-      return { 
-        ok: res.ok, 
+      return {
+        ok: res.ok,
         status: res.status,
         data: data
       };
     } catch (error) {
-      return { 
-        ok: false, 
+      return {
+        ok: false,
         status: 500,
         data: { message: "Error de conexión" }
       };
@@ -92,18 +90,20 @@ class ApiService {
         headers: headers,
         body: JSON.stringify({ bloque_horario, sede }),
       });
-      
+
       let data;
       const contentType = res.headers.get("content-type");
       
       if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
+        // Si es JSON, extraer solo el mensaje
+        const jsonData = await res.json();
+        data = jsonData.message || jsonData; // Extraer solo el campo 'message'
       } else {
+        // Si es texto plano
         data = await res.text();
       }
       
       console.log("[makeReserva] Respuesta:", res.status, data);
-      
       return { ok: res.ok, data };
     } catch (error) {
       console.error("[makeReserva] Error:", error);
@@ -128,7 +128,6 @@ class ApiService {
     } else if (typeof fecha === "string" && fecha.includes("T")) {
       fechaFormateada = fecha.split("T")[0];
     }
-
     const res = await fetch(`${API_BASE}/api/admin/cancelar-reserva`, {
       method: "DELETE",
       headers: {
@@ -242,11 +241,11 @@ class ApiService {
     });
   }
 
-    // Asistencia Masiva
+  // Asistencia Masiva
   static async getUsuariosBloque(bloque, sede, fecha) {
     const fechaParam = fecha || new Date().toISOString().split('T')[0];
     const res = await fetch(
-      `${API_BASE}/api/admin/asistencia-masiva?bloque=${bloque}&sede=${sede}&fecha=${fechaParam}`,
+      `${API_BASE}/api/admin/asistencia-masiva?bloque=${encodeURIComponent(bloque)}&sede=${encodeURIComponent(sede)}&fecha=${fechaParam}`,
       {
         headers: this.adminHeader(),
       }
@@ -279,6 +278,41 @@ class ApiService {
     return { ok: res.ok };
   }
 
+  // Obtener reservas del alumno (solo hoy)
+  static async getMisReservas(user) {
+    try {
+      const res = await fetch(`${API_BASE}/api/reservas`, {
+        method: "GET",
+        headers: {
+          ...this.authHeader(user),
+        },
+      });
+      return { ok: res.ok, data: await res.json() };
+    } catch (error) {
+      console.error("[getMisReservas] Error:", error);
+      return { ok: false, data: { reservas: [] } };
+    }
+  }
+
+  // Cancelar reserva del alumno
+  static async cancelarMiReserva(bloque_horario, sede, user) {
+    try {
+      const res = await fetch(`${API_BASE}/api/reservas`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...this.authHeader(user),
+        },
+        body: JSON.stringify({ bloque_horario, sede }),
+      });
+      
+      const text = await res.text();
+      return { ok: res.ok, data: text };
+    } catch (error) {
+      console.error("[cancelarMiReserva] Error:", error);
+      return { ok: false, data: "Error al cancelar" };
+    }
+  }
 }
 
 export default ApiService;

@@ -1,28 +1,31 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ApiService from "../../services/api";
 
 export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCupos }) {
   const [sedeSeleccionada, setSedeSeleccionada] = useState("Vitacura");
+  const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
+  const [misReservas, setMisReservas] = useState([]);
 
-const hacerReserva = async (bloque, sede) => {
-  console.log("===== DEBUG USER =====");
-  console.log("User completo:", user);
-  console.log("user.username:", user?.username);
-  console.log("user.password:", user?.password);
-  console.log("======================");
-  
-  if (!bloque) {
-    setMessage("Selecciona un bloque primero");
-    return;
-  }
-      if (!bloque) {
-      setMessage("Selecciona un bloque primero");
-      return;
+  // Obtener las reservas del alumno al cargar
+  useEffect(() => {
+    obtenerMisReservas();
+  }, []);
+
+  const obtenerMisReservas = async () => {
+    try {
+      const { ok, data } = await ApiService.getMisReservas(user);
+      if (ok && data.reservas) {
+        setMisReservas(data.reservas);
+      }
+    } catch (error) {
+      console.error("Error obteniendo reservas:", error);
     }
+  };
 
-    if (!sede) {
-      setMessage("Selecciona una sede primero");
+  const hacerReserva = async (bloque, sede) => {
+    if (!bloque || !sede) {
+      setMessage("Selecciona un bloque y sede primero");
       return;
     }
 
@@ -31,12 +34,29 @@ const hacerReserva = async (bloque, sede) => {
       const { ok, data } = await ApiService.makeReserva(bloque, sede, user);
       
       if (ok) {
-        if (typeof data === 'object' && data.message) {
-          setMessage(data.message);
-        } else {
-          setMessage(data || "Reserva realizada exitosamente");
+        setMostrarRecordatorio(true);
+        
+        // Extraer solo el mensaje si viene como objeto JSON o string JSON
+        let mensaje = data;
+        if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            mensaje = parsed.message || data;
+          } catch {
+            mensaje = data;
+          }
+        } else if (typeof data === 'object' && data.message) {
+          mensaje = data.message;
         }
+        
+        setMessage(mensaje || "Reserva realizada exitosamente");
+        
         await fetchCupos();
+        await obtenerMisReservas();
+        
+        setTimeout(() => {
+          setMostrarRecordatorio(false);
+        }, 8000);
       } else {
         setMessage(data || "Error al realizar la reserva");
       }
@@ -44,6 +64,33 @@ const hacerReserva = async (bloque, sede) => {
       console.error("Error en reserva:", error);
       setMessage("Error al reservar");
     }
+  };
+
+  const cancelarReserva = async (bloque, sede) => {
+    if (!window.confirm(`¿Estás seguro que deseas cancelar tu reserva para el bloque ${bloque} en ${sede}?`)) {
+      return;
+    }
+
+    setMessage("Cancelando reserva...");
+    try {
+      const { ok, data } = await ApiService.cancelarMiReserva(bloque, sede, user);
+      
+      if (ok) {
+        setMessage("Reserva cancelada exitosamente");
+        await fetchCupos();
+        await obtenerMisReservas();
+      } else {
+        setMessage(data || "Error al cancelar la reserva");
+      }
+    } catch (error) {
+      console.error("Error cancelando reserva:", error);
+      setMessage("Error al cancelar la reserva");
+    }
+  };
+
+  // Verificar si el alumno tiene reserva en un bloque específico
+  const tieneReservaEn = (bloque, sede) => {
+    return misReservas.some(r => r.bloque_horario === bloque && r.sede === sede);
   };
 
   // Filtrar cupos por sede seleccionada
@@ -56,6 +103,21 @@ const hacerReserva = async (bloque, sede) => {
       <h2 className="text-lg font-medium text-gray-800 mb-3">
         Reservar cupo
       </h2>
+
+      {/* RECORDATORIO - Solo aparece después de reservar */}
+      {mostrarRecordatorio && (
+        <div className="mb-4 bg-gradient-to-r from-yellow-400 to-orange-400 text-white p-4 rounded-lg shadow-lg border-2 border-yellow-500">
+          <h3 className="font-bold text-lg mb-2">
+            Recordatorio importante
+          </h3>
+          <p className="text-sm mb-2">No olvides llevar:</p>
+          <ul className="text-sm space-y-1 ml-4 list-disc">
+            <li>Credencial USM</li>
+            <li>Toalla de mano</li>
+            <li>Ropa deportiva</li>
+          </ul>
+        </div>
+      )}
 
       {/* Selector de Sede */}
       <div className="mb-4">
@@ -94,6 +156,8 @@ const hacerReserva = async (bloque, sede) => {
         <div className="space-y-2">
           {cuposFiltrados.map(([key, info]) => {
             const disponibles = info.total - info.reservados;
+            const yaReservado = tieneReservaEn(info.bloque, info.sede);
+            
             return (
               <div
                 key={key}
@@ -106,17 +170,29 @@ const hacerReserva = async (bloque, sede) => {
                   </p>
                   <p className="text-xs text-gray-500">{info.sede}</p>
                 </div>
-                <button
-                  disabled={disponibles <= 0}
-                  onClick={() => hacerReserva(info.bloque, info.sede)}
-                  className={`px-4 py-2 rounded text-white ${
-                    disponibles > 0
-                      ? "bg-indigo-600 hover:bg-indigo-700"
-                      : "bg-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  Reservar
-                </button>
+                
+                {yaReservado ? (
+                  // Botón CANCELAR (rojo) si ya tiene reserva
+                  <button
+                    onClick={() => cancelarReserva(info.bloque, info.sede)}
+                    className="px-4 py-2 rounded text-white bg-red-600 hover:bg-red-700 transition"
+                  >
+                    Cancelar
+                  </button>
+                ) : (
+                  // Botón RESERVAR (indigo) si no tiene reserva
+                  <button
+                    disabled={disponibles <= 0}
+                    onClick={() => hacerReserva(info.bloque, info.sede)}
+                    className={`px-4 py-2 rounded text-white ${
+                      disponibles > 0
+                        ? "bg-indigo-600 hover:bg-indigo-700"
+                        : "bg-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    Reservar
+                  </button>
+                )}
               </div>
             );
           })}

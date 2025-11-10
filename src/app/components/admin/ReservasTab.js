@@ -133,6 +133,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
                         <div className="flex-1">
                           <p className="font-semibold text-gray-800">{user.nombre}</p>
                           <p className="text-sm text-gray-600">{user.email}</p>
+                            <p className="text-xs text-gray-400">Rol: {user.rol || "—"}</p>
                           <div className="flex gap-3 mt-1">
                             <p className="text-xs text-gray-500">
                               📍 {user.sede}

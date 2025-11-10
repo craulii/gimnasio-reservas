@@ -130,6 +130,9 @@ export default function UsuariosTab({ setMessage }) {
                         </span>
                       </div>
                       <p className="text-sm text-gray-500">{usuario.email}</p>
+                      <div className="text-xs text-gray-500 mt-1">
+  Rol: {usuario.rol || "No especificado"}
+</div>
                       <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
                         <span>{usuario.total_reservas} reservas</span>
                         <span>{usuario.total_asistencias} asistencias</span>
