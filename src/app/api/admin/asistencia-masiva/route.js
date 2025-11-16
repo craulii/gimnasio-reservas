@@ -1,5 +1,23 @@
 import pool from "../../../lib/db";
 
+// Llamar al procesador de ausencias automáticas
+async function procesarAusenciasAutomaticas(bloque, sede, fecha) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/admin/procesar-ausencias`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bloque, sede, fecha })
+    });
+    
+    const data = await response.json();
+    console.log('[ASISTENCIA-MASIVA] Resultado auto-ausencias:', data);
+    return data;
+  } catch (error) {
+    console.error('[ASISTENCIA-MASIVA] Error llamando procesar-ausencias:', error);
+    return null;
+  }
+}
+
 export async function POST(request) {
   const userHeader = request.headers.get("x-user");
   if (!userHeader) return new Response("No autorizado", { status: 401 });
@@ -128,6 +146,8 @@ export async function GET(request) {
   if (!bloque || !sede) {
     return new Response("Faltan parámetros", { status: 400 });
   }
+  
+  await procesarAusenciasAutomaticas(bloque, sede, fecha);
 
   try {
     const [rows] = await pool.query(

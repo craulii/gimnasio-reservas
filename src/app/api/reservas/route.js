@@ -25,9 +25,9 @@ async function authenticate(email, password) {
   try {
     console.log("[authenticate] Autenticando:", email);
     
-    // *** MODIFICADO: Agregados campos faltas y baneado ***
+    // *** MODIFICADO: Agregados campos faltas, baneado y ultimo_reset_faltas ***
     const [rows] = await pool.query(
-      "SELECT email, password, name, rol, is_admin, faltas, baneado FROM users WHERE email = ? LIMIT 1",
+      "SELECT email, password, name, rol, is_admin, faltas, baneado, ultimo_reset_faltas FROM users WHERE email = ? LIMIT 1",
       [email]
     );
 
@@ -52,6 +52,41 @@ async function authenticate(email, password) {
   }
 }
 
+// *** NUEVA FUNCIÓN: Verificar y resetear faltas si pasaron 6 meses ***
+async function verificarYResetearFaltas(email, ultimoReset, faltasActuales) {
+  try {
+    // Si nunca se ha reseteado, inicializar la fecha
+    if (!ultimoReset) {
+      await pool.query(
+        "UPDATE users SET ultimo_reset_faltas = NOW() WHERE email = ?",
+        [email]
+      );
+      console.log(`[RESET FALTAS] Inicializado para ${email}`);
+      return;
+    }
+
+    // Calcular si pasaron 6 meses (180 días)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const lastReset = new Date(ultimoReset);
+
+    // Si pasaron más de 6 meses y tiene faltas, resetear
+    if (lastReset < sixMonthsAgo && faltasActuales > 0) {
+      await pool.query(
+        "UPDATE users SET faltas = 0, baneado = 0, ultimo_reset_faltas = NOW() WHERE email = ?",
+        [email]
+      );
+      console.log(`[RESET FALTAS] ✅ Faltas reseteadas para ${email} (${faltasActuales} -> 0)`);
+      return true; // Indica que se reseteó
+    }
+    
+    return false; // No se reseteó
+  } catch (error) {
+    console.error("[RESET FALTAS] Error:", error);
+    return false;
+  }
+}
+
 export async function POST(request) {
   const auth = request.headers.get("authorization");
   const creds = parseAuth(auth);
@@ -62,7 +97,16 @@ export async function POST(request) {
 
   if (user.is_admin !== 0) return new Response("Solo los alumnos pueden realizar reservas.", { status: 403 });
 
-  // *** NUEVA VALIDACIÓN: Verificar si el usuario está baneado ***
+  // *** NUEVA VERIFICACIÓN: Resetear faltas si pasaron 6 meses ***
+  const seReseteo = await verificarYResetearFaltas(user.email, user.ultimo_reset_faltas, user.faltas);
+  
+  // Si se resetearon las faltas, actualizar el objeto user
+  if (seReseteo) {
+    user.faltas = 0;
+    user.baneado = 0;
+  }
+
+  // *** VALIDACIÓN: Verificar si el usuario está baneado ***
   if (user.baneado === 1) {
     return new Response(
       JSON.stringify({
@@ -77,7 +121,7 @@ export async function POST(request) {
     );
   }
 
-  // *** OPCIONAL: Advertencia si tiene 2 faltas ***
+  // *** ADVERTENCIA: Si tiene 2 faltas ***
   if (user.faltas >= 2 && user.faltas < 3) {
     console.warn(`[ADVERTENCIA] ${user.email} tiene ${user.faltas} faltas. Una más y será baneado.`);
   }
@@ -140,7 +184,7 @@ export async function POST(request) {
 
     console.log(`Reserva confirmada: ${user.email} -> ${bloque_horario} en ${sede} (${new Date().toISOString().split('T')[0]})`);
 
-    // *** OPCIONAL: Devolver información de faltas en la respuesta ***
+    // *** RESPUESTA: Incluir información de faltas ***
     const responseMessage = user.faltas >= 2 
       ? `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ⚠️ ADVERTENCIA: Tienes ${user.faltas} faltas. Una más y tu cuenta será suspendida.`
       : `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ¡Gracias!`;
@@ -178,7 +222,7 @@ export async function GET(request) {
       [user.email]
     );
 
-    // *** MODIFICADO: Incluir información de faltas del usuario ***
+    // *** INCLUIR: Información de faltas del usuario ***
     return new Response(JSON.stringify({
       reservas: reservas,
       usuario: {

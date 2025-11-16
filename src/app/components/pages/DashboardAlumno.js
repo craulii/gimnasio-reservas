@@ -26,6 +26,49 @@ export default function DashboardAlumno({ user, message, setMessage, onLogout })
             </button>
           </div>
 
+          {/* MENSAJE DE ADVERTENCIA PERMANENTE */}
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div className="flex-1">
+                <h3 className="font-bold text-yellow-900 mb-2">
+                  Normas del Gimnasio
+                </h3>
+                <ul className="text-sm text-yellow-800 space-y-1">
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      Si acumulas <strong>3 faltas</strong> (no asistencias), quedarás <strong>baneado del gimnasio por 6 meses</strong>.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      Si no podrás asistir, <strong>elimina tu reserva</strong> para que otro compañero pueda usar el cupo.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="font-bold">•</span>
+                    <span>
+                      Tus faltas se resetean automáticamente cada 6 meses.
+                    </span>
+                  </li>
+                </ul>
+                {user.faltas > 0 && (
+                  <div className={`mt-3 p-2 rounded font-bold text-center ${
+                    user.faltas >= 2 
+                      ? 'bg-red-100 text-red-800 border border-red-300' 
+                      : 'bg-orange-100 text-orange-800 border border-orange-300'
+                  }`}>
+                    {user.faltas >= 2 ? '🚨' : '⚠️'} Tienes {user.faltas} falta{user.faltas > 1 ? 's' : ''} acumulada{user.faltas > 1 ? 's' : ''}
+                    {user.faltas >= 2 && ' - ¡Una más y serás baneado!'}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Mensaje dinámico del sistema */}
           {message && (
             <div className={`rounded-md p-4 ${
               message.includes("éxito") ? "bg-green-50 text-green-800" : "bg-blue-50 text-blue-800"

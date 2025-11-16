@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { FiLogOut, FiSettings, FiCalendar, FiBarChart2, FiUsers } from "react-icons/fi";
+import { FiLogOut, FiSettings, FiCalendar, FiBarChart2, FiUsers, FiAlertTriangle } from "react-icons/fi";
 import GestionTab from "../admin/GestionTab";
 import ReservasTab from "../admin/ReservasTab";
 import EstadisticasTab from "../admin/EstadisticasTab";
 import UsuariosTab from "../admin/UsuariosTab";
+import BotonPanicoTab from "../admin/BotonPanicoTab";
 import useCupos from "../../hooks/useCupos";
 
 export default function DashboardAdmin({ user, message, setMessage, onLogout }) {
@@ -16,6 +17,7 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
     { id: "reservas", label: "Reservas", icon: FiCalendar },
     { id: "estadisticas", label: "Estadísticas", icon: FiBarChart2 },
     { id: "usuarios", label: "Usuarios", icon: FiUsers },
+    { id: "panico", label: "Botón Pánico", icon: FiAlertTriangle },
   ];
 
   return (
@@ -97,6 +99,9 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
             )}
             {activeTab === "usuarios" && (
               <UsuariosTab setMessage={setMessage} />
+            )}
+            {activeTab === "panico" && (
+              <BotonPanicoTab />
             )}
           </div>
         </div>

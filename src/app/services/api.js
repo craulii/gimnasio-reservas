@@ -313,6 +313,26 @@ class ApiService {
       return { ok: false, data: "Error al cancelar" };
     }
   }
+  // Botón de Pánico
+static async activarBotonPanico(bloques, fecha) {
+  const res = await fetch(`${API_BASE}/api/admin/boton-panico`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...this.adminHeader(),
+    },
+    body: JSON.stringify({ bloques, fecha }),
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
+static async getEstadoBloques(fecha) {
+  const res = await fetch(`${API_BASE}/api/admin/boton-panico?fecha=${fecha}`, {
+    headers: this.adminHeader(),
+  });
+  return { ok: res.ok, data: await res.json() };
+}
+
 }
 
 export default ApiService;
