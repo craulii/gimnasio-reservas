@@ -1,68 +1,31 @@
-import pool from "../../lib/db";
-import bcrypt from "bcrypt"; // o bcryptjs si usas ese
+import { NextResponse } from "next/server";
+import mysql from "mysql2/promise";
 
-function parseAuth(authHeader) {
-  console.log("[parseAuth] Header recibido:", authHeader);
-  
-  if (!authHeader || !authHeader.startsWith('Basic ')) {
-    console.log("[parseAuth] Header inválido o no es Basic");
-    return null;
-  }
-  
-  try {
-    const base64Credentials = authHeader.split(' ')[1];
-    const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
-    const [username, password] = credentials.split(':');
-    console.log("[parseAuth] Usuario extraído:", username);
-    return { username, password };
-  } catch (error) {
-    console.error("[parseAuth] Error parseando:", error);
-    return null;
-  }
+// 1. CONFIGURACIÓN BDD (La misma que funciona en Login)
+const dbConfig = {
+  host: '127.0.0.1',
+  user: 'reservas_crauli',
+  password: 'CrauliChris69!',
+  database: 'reservas_gymusm',
+  port: 3306
+};
+
+// Función para conectar
+async function getConnection() {
+  return await mysql.createConnection(dbConfig);
 }
 
-async function authenticate(email, password) {
-  try {
-    console.log("[authenticate] Autenticando:", email);
-    
-    // *** MODIFICADO: Agregados campos faltas, baneado y ultimo_reset_faltas ***
-    const [rows] = await pool.query(
-      "SELECT email, password, name, rol, is_admin, faltas, baneado, ultimo_reset_faltas FROM users WHERE email = ? LIMIT 1",
-      [email]
-    );
-
-    if (rows.length === 0) {
-      console.log("[authenticate] Usuario no encontrado");
-      return null;
-    }
-
-    const user = rows[0];
-    const isValid = await bcrypt.compare(password, user.password);
-    
-    console.log("[authenticate] Contraseña válida:", isValid);
-    
-    if (!isValid) {
-      return null;
-    }
-
-    return user;
-  } catch (error) {
-    console.error("[authenticate] Error:", error);
-    return null;
-  }
-}
-
-// *** NUEVA FUNCIÓN: Verificar y resetear faltas si pasaron 6 meses ***
-async function verificarYResetearFaltas(email, ultimoReset, faltasActuales) {
+// 2. FUNCIÓN DE MANTENIMIENTO (Reseteo de Faltas)
+async function verificarYResetearFaltas(connection, email, ultimoReset, faltasActuales) {
   try {
     // Si nunca se ha reseteado, inicializar la fecha
     if (!ultimoReset) {
-      await pool.query(
+      await connection.execute(
         "UPDATE users SET ultimo_reset_faltas = NOW() WHERE email = ?",
         [email]
       );
       console.log(`[RESET FALTAS] Inicializado para ${email}`);
-      return;
+      return false;
     }
 
     // Calcular si pasaron 6 meses (180 días)
@@ -72,11 +35,11 @@ async function verificarYResetearFaltas(email, ultimoReset, faltasActuales) {
 
     // Si pasaron más de 6 meses y tiene faltas, resetear
     if (lastReset < sixMonthsAgo && faltasActuales > 0) {
-      await pool.query(
+      await connection.execute(
         "UPDATE users SET faltas = 0, baneado = 0, ultimo_reset_faltas = NOW() WHERE email = ?",
         [email]
       );
-      console.log(`[RESET FALTAS] ✅ Faltas reseteadas para ${email} (${faltasActuales} -> 0)`);
+      console.log(`[RESET FALTAS] ✅ Faltas reseteadas para ${email}`);
       return true; // Indica que se reseteó
     }
     
@@ -87,143 +50,144 @@ async function verificarYResetearFaltas(email, ultimoReset, faltasActuales) {
   }
 }
 
+// 3. OBTENER USUARIO DESDE HEADER (Sin contraseña, confiamos en Middleware)
+async function getUserFromHeader(request, connection) {
+    const email = request.headers.get('x-user'); // El Middleware puso esto aquí
+    if (!email) return null;
+
+    const [rows] = await connection.execute(
+        "SELECT email, name, rol, is_admin, faltas, baneado, ultimo_reset_faltas FROM users WHERE email = ? LIMIT 1",
+        [email]
+    );
+    
+    return rows.length > 0 ? rows[0] : null;
+}
+
+// --- MÉTODO POST: CREAR RESERVA ---
 export async function POST(request) {
-  const auth = request.headers.get("authorization");
-  const creds = parseAuth(auth);
-  if (!creds) return new Response("Acceso no autorizado. Por favor, inicia sesión.", { status: 401 });
+  let connection;
+  try {
+    connection = await getConnection();
 
-  const user = await authenticate(creds.username, creds.password);
-  if (!user) return new Response("Acceso no autorizado. Usuario o contraseña incorrectos.", { status: 401 });
+    // A. Identificar usuario
+    const user = await getUserFromHeader(request, connection);
+    
+    if (!user) {
+        return NextResponse.json({ error: "Acceso no autorizado. Cookie inválida." }, { status: 401 });
+    }
 
-  if (user.is_admin !== 0) return new Response("Solo los alumnos pueden realizar reservas.", { status: 403 });
+    // B. Verificar rol (Solo alumnos reservan)
+    if (user.is_admin === 1) { 
+        return NextResponse.json({ error: "Los administradores no pueden tomar cupos." }, { status: 403 });
+    }
 
-  // *** NUEVA VERIFICACIÓN: Resetear faltas si pasaron 6 meses ***
-  const seReseteo = await verificarYResetearFaltas(user.email, user.ultimo_reset_faltas, user.faltas);
-  
-  // Si se resetearon las faltas, actualizar el objeto user
-  if (seReseteo) {
-    user.faltas = 0;
-    user.baneado = 0;
-  }
+    // C. Mantenimiento de faltas
+    const seReseteo = await verificarYResetearFaltas(connection, user.email, user.ultimo_reset_faltas, user.faltas);
+    if (seReseteo) {
+      user.faltas = 0;
+      user.baneado = 0;
+    }
 
-  // *** VALIDACIÓN: Verificar si el usuario está baneado ***
-  if (user.baneado === 1) {
-    return new Response(
-      JSON.stringify({
-        message: `Tu cuenta está suspendida por acumular ${user.faltas} faltas (no asistencias). Contacta al administrador del gimnasio para más información.`,
+    // D. Verificar Baneo
+    if (user.baneado === 1) {
+      return NextResponse.json({
+        message: `Tu cuenta está suspendida por acumular ${user.faltas} faltas.`,
         baneado: true,
         faltas: user.faltas
-      }),
-      { 
-        status: 403,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
-  }
+      }, { status: 403 });
+    }
 
-  // *** ADVERTENCIA: Si tiene 2 faltas ***
-  if (user.faltas >= 2 && user.faltas < 3) {
-    console.warn(`[ADVERTENCIA] ${user.email} tiene ${user.faltas} faltas. Una más y será baneado.`);
-  }
+    // E. Leer datos de la reserva
+    const { bloque_horario, sede } = await request.json();
+    if (!bloque_horario || !sede) {
+        return NextResponse.json({ error: "Faltan datos (bloque o sede)" }, { status: 400 });
+    }
 
-  const { bloque_horario, sede } = await request.json();
-  
-  if (!bloque_horario) return new Response("Debe seleccionar un bloque horario para reservar.", { status: 400 });
-  if (!sede) return new Response("Debe seleccionar una sede para reservar.", { status: 400 });
+    console.log(`[RESERVA] Intento: ${user.email} -> ${bloque_horario} en ${sede}`);
 
-  try {
-    console.log(`[${new Date().toISOString()}] ${user.email} intenta reservar ${bloque_horario} en ${sede}`);
-    
-    const [cuposResult] = await pool.query(
+    // F. Verificar Cupos Disponibles
+    const [cuposResult] = await connection.execute(
       'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
       [bloque_horario, sede]
     );
     
     if (cuposResult.length === 0) {
-      return new Response(`Bloque horario no disponible para hoy en ${sede}`, { status: 404 });
+      return NextResponse.json({ error: "Bloque no disponible hoy" }, { status: 404 });
     }
     
     const { total, reservados } = cuposResult[0];
     if (reservados >= total) {
-      return new Response(`No hay cupos disponibles para este bloque en ${sede} hoy`, { status: 400 });
+      return NextResponse.json({ error: "No quedan cupos disponibles" }, { status: 400 });
     }
 
-    const [reservasHoy] = await pool.query(
+    // G. Verificar si ya reservó hoy (Regla: 1 reserva al día)
+    const [reservasHoy] = await connection.execute(
       `SELECT * FROM reservas WHERE email = ? AND fecha = CURDATE()`,
       [user.email]
     );
     
     if (reservasHoy.length > 0) {
-      const tieneEnBloque = reservasHoy.some(r => r.bloque_horario === bloque_horario && r.sede === sede);
-      if (tieneEnBloque) {
-        return new Response(
-          `Ya tienes una reserva para el bloque ${bloque_horario} en ${sede} hoy. No puedes reservar más de una vez en el mismo bloque y sede.`,
-          { status: 400 }
-        );
-      } else {
-        return new Response(
-          `Ya tienes una reserva para hoy en ${reservasHoy[0].sede}. Solo puedes reservar una vez al día.`,
-          { status: 400 }
-        );
-      }
+      return NextResponse.json({ error: "Ya tienes una reserva activa para hoy." }, { status: 400 });
     }
 
-    await pool.query("BEGIN");
-    
-    await pool.query(
-      "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, CURDATE(), ?, ?, 0)",
-      [user.email, bloque_horario, sede]
-    );
+    // H. TRANSACCIÓN ATÓMICA (Insertar + Descontar Cupo)
+    await connection.beginTransaction();
 
-    await pool.query(
-      "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
-      [bloque_horario, sede]
-    );
+    try {
+        await connection.execute(
+            "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, CURDATE(), ?, ?, 0)",
+            [user.email, bloque_horario, sede]
+        );
 
-    await pool.query("COMMIT");
+        await connection.execute(
+            "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
+            [bloque_horario, sede]
+        );
 
-    console.log(`Reserva confirmada: ${user.email} -> ${bloque_horario} en ${sede} (${new Date().toISOString().split('T')[0]})`);
+        await connection.commit();
+    } catch (err) {
+        await connection.rollback();
+        throw err; // Lanza el error al catch principal
+    }
 
-    // *** RESPUESTA: Incluir información de faltas ***
-    const responseMessage = user.faltas >= 2 
-      ? `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ⚠️ ADVERTENCIA: Tienes ${user.faltas} faltas. Una más y tu cuenta será suspendida.`
-      : `Reserva realizada exitosamente para el bloque ${bloque_horario} en ${sede} de hoy. ¡Gracias!`;
+    console.log(`✅ Reserva confirmada: ${user.email}`);
 
-    return new Response(
-      JSON.stringify({
-        message: responseMessage,
-        faltas: user.faltas,
-        bloque: bloque_horario,
-        sede: sede
-      }),
-      { 
-        status: 201,
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    // I. Respuesta Final
+    const msg = user.faltas >= 2 
+      ? `Reserva exitosa. ⚠️ OJO: Tienes ${user.faltas} faltas. Una más y serás baneado.`
+      : `Reserva exitosa para ${bloque_horario} en ${sede}.`;
+
+    return NextResponse.json({
+      message: msg,
+      faltas: user.faltas,
+      bloque: bloque_horario,
+      sede: sede
+    }, { status: 201 });
+
   } catch (error) {
-    await pool.query("ROLLBACK");
-    console.error("Error al realizar reserva:", error);
-    return new Response("Error interno del servidor. Por favor, intenta más tarde.", { status: 500 });
+    console.error("Error POST Reserva:", error);
+    if (connection) await connection.rollback(); // Por seguridad
+    return NextResponse.json({ error: "Error interno: " + error.message }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
+// --- MÉTODO GET: VER MIS RESERVAS ---
 export async function GET(request) {
-  const auth = request.headers.get("authorization");
-  const creds = parseAuth(auth);
-  if (!creds) return new Response("Acceso no autorizado", { status: 401 });
-
-  const user = await authenticate(creds.username, creds.password);
-  if (!user) return new Response("Credenciales inválidas", { status: 401 });
-
+  let connection;
   try {
-    const [reservas] = await pool.query(
+    connection = await getConnection();
+    const user = await getUserFromHeader(request, connection);
+    
+    if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+    const [reservas] = await connection.execute(
       "SELECT * FROM reservas WHERE email = ? AND fecha = CURDATE()",
       [user.email]
     );
 
-    // *** INCLUIR: Información de faltas del usuario ***
-    return new Response(JSON.stringify({
+    return NextResponse.json({
       reservas: reservas,
       usuario: {
         email: user.email,
@@ -231,46 +195,49 @@ export async function GET(request) {
         faltas: user.faltas,
         baneado: user.baneado
       }
-    }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
     });
   } catch (error) {
-    console.error("[GET RESERVAS] Error:", error);
-    return new Response("Error al obtener reservas", { status: 500 });
+    console.error("Error GET Reservas:", error);
+    return NextResponse.json({ error: "Error al obtener reservas" }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
+// --- MÉTODO DELETE: CANCELAR RESERVA ---
 export async function DELETE(request) {
-  const auth = request.headers.get("authorization");
-  const creds = parseAuth(auth);
-  if (!creds) return new Response("Acceso no autorizado", { status: 401 });
-
-  const user = await authenticate(creds.username, creds.password);
-  if (!user) return new Response("Credenciales inválidas", { status: 401 });
-
+  let connection;
   try {
-    const { bloque_horario, sede } = await request.json();
+    connection = await getConnection();
+    const user = await getUserFromHeader(request, connection);
     
-    const [result] = await pool.query(
+    if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+    const { bloque_horario, sede } = await request.json();
+
+    // Intentar borrar
+    const [result] = await connection.execute(
       "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = CURDATE()",
       [user.email, bloque_horario, sede]
     );
 
     if (result.affectedRows === 0) {
-      return new Response("No se encontró la reserva", { status: 404 });
+      return NextResponse.json({ error: "No se encontró la reserva para cancelar" }, { status: 404 });
     }
 
-    await pool.query(
+    // Liberar cupo
+    await connection.execute(
       "UPDATE cupos SET reservados = reservados - 1 WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
       [bloque_horario, sede]
     );
 
-    console.log(`[CANCELAR RESERVA] ${user.email} canceló el bloque ${bloque_horario} en ${sede}`);
-    
-    return new Response("Reserva cancelada exitosamente", { status: 200 });
+    console.log(`🗑️ Reserva cancelada: ${user.email}`);
+    return NextResponse.json({ message: "Reserva cancelada exitosamente" });
+
   } catch (error) {
-    console.error("[CANCELAR RESERVA] Error:", error);
-    return new Response("Error al cancelar la reserva", { status: 500 });
+    console.error("Error DELETE Reserva:", error);
+    return NextResponse.json({ error: "Error al cancelar" }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

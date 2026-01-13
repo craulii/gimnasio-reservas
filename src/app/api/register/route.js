@@ -1,5 +1,5 @@
 import pool from "../../lib/db";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { normalizarRut, validarRut } from "../../lib/rut";
 
 const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;

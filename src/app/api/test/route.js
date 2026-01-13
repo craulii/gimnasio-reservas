@@ -4,7 +4,7 @@ export async function GET() {
   try {
     const db = await mysql.createConnection({
       host: "127.0.0.1",
-      port: 3307,
+      port: process.env.DB_PORT || 3306,
       user: "root",
       password: "root",
       database: "gimnasio",

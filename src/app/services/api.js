@@ -75,19 +75,14 @@ class ApiService {
   // Reservas
   static async makeReserva(bloque_horario, sede, user) {
     try {
-      console.log("[makeReserva] Enviando reserva para bloque:", bloque_horario, "sede:", sede);
-      console.log("[makeReserva] Usuario:", user?.username);
-      
-      const headers = {
-        "Content-Type": "application/json",
-        ...this.authHeader(user),
-      };
-      
-      console.log("[makeReserva] Headers:", headers);
+      console.log("[makeReserva] Enviando:", bloque_horario, sede);
       
       const res = await fetch(`${API_BASE}/api/reservas`, {
         method: "POST",
-        headers: headers,
+        headers: {
+          "Content-Type": "application/json",
+          // ❌ BORRADO: ...this.authHeader(user) (Ya usamos Cookies)
+        },
         body: JSON.stringify({ bloque_horario, sede }),
       });
 
@@ -95,19 +90,17 @@ class ApiService {
       const contentType = res.headers.get("content-type");
       
       if (contentType && contentType.includes("application/json")) {
-        // Si es JSON, extraer solo el mensaje
-        const jsonData = await res.json();
-        data = jsonData.message || jsonData; // Extraer solo el campo 'message'
+        data = await res.json(); // Devolvemos el objeto completo para procesarlo mejor en el componente
       } else {
-        // Si es texto plano
         data = await res.text();
       }
       
       console.log("[makeReserva] Respuesta:", res.status, data);
-      return { ok: res.ok, data };
+      return { ok: res.ok, data }; // Devolvemos data tal cual (puede ser objeto o string)
+
     } catch (error) {
       console.error("[makeReserva] Error:", error);
-      return { ok: false, data: "Error de conexión" };
+      return { ok: false, data: { error: "Error de conexión con el servidor" } };
     }
   }
 

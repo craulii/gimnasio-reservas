@@ -30,26 +30,16 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
     }
 
     setMessage("Reservando...");
+    
     try {
       const { ok, data } = await ApiService.makeReserva(bloque, sede, user);
       
       if (ok) {
         setMostrarRecordatorio(true);
         
-        // Extraer solo el mensaje si viene como objeto JSON o string JSON
-        let mensaje = data;
-        if (typeof data === 'string') {
-          try {
-            const parsed = JSON.parse(data);
-            mensaje = parsed.message || data;
-          } catch {
-            mensaje = data;
-          }
-        } else if (typeof data === 'object' && data.message) {
-          mensaje = data.message;
-        }
-        
-        setMessage(mensaje || "Reserva realizada exitosamente");
+        // Manejo seguro del mensaje de éxito
+        const successMsg = data?.message || "Reserva realizada exitosamente";
+        setMessage(String(successMsg));
         
         await fetchCupos();
         await obtenerMisReservas();
@@ -57,12 +47,16 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
         setTimeout(() => {
           setMostrarRecordatorio(false);
         }, 8000);
+
       } else {
-        setMessage(data || "Error al realizar la reserva");
+        // 🛡️ AQUÍ ESTABA EL ERROR DE LA PANTALLA NEGRA
+        // Extraemos el texto del objeto de error de forma segura
+        const errorMsg = data?.error || data?.message || (typeof data === 'string' ? data : "Error al realizar la reserva");
+        setMessage(String(errorMsg));
       }
     } catch (error) {
       console.error("Error en reserva:", error);
-      setMessage("Error al reservar");
+      setMessage("Error crítico al intentar reservar");
     }
   };
 

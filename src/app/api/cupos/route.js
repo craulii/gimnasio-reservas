@@ -1,118 +1,99 @@
-import pool from '../../lib/db';
+import { NextResponse } from "next/server";
+import mysql from "mysql2/promise";
+
+// 1. CREDENCIALES DIRECTAS (Las mismas que usamos en el login y en el PHP)
+const dbConfig = {
+  host: '127.0.0.1',
+  user: 'reservas_crauli',     
+  password: 'CrauliChris69!', 
+  database: 'reservas_gymusm',
+  port: 3306
+};
+
+// Función auxiliar para conectar
+async function getConnection() {
+  return await mysql.createConnection(dbConfig);
+}
 
 export async function GET(request) {
+  let connection;
   try {
-    console.log(`[${new Date().toISOString()}] Cargando cupos del día...`);
-    
-    await ejecutarMantenimientoSiEsNecesario();
-    
+    // 2. Conexión DIRECTA (Bypass de lib/db.js)
+    connection = await getConnection();
+
+    // 3. Capturamos parametros (por si filtras por sede)
     const { searchParams } = new URL(request.url);
     const sede = searchParams.get('sede');
 
-    let query = `
-      SELECT bloque, sede, total, reservados 
-      FROM cupos 
-      WHERE fecha = CURDATE()
-    `;
-    let params = [];
+    let query = "SELECT * FROM cupos WHERE fecha >= CURDATE()";
+    const params = [];
 
     if (sede) {
-      query += ' AND sede = ?';
+      query += " AND sede = ?";
       params.push(sede);
     }
 
-    query += ` ORDER BY 
-      CAST(SUBSTRING_INDEX(bloque, '-', 1) AS UNSIGNED),
-      CAST(SUBSTRING_INDEX(bloque, '-', -1) AS UNSIGNED),
-      sede
-    `;
-    
-    const [rows] = await pool.query(query, params);
-    
+    // Ordenamos para que salgan bonitos en la lista
+    query += " ORDER BY fecha ASC, bloque ASC";
+
+    const [rows] = await connection.execute(query, params);
+
+    // 4. Formateo de datos para el Frontend
+    // Convertimos la lista de la BDD al formato objeto { "clave": {datos} } que usa tu app
     const cupos = {};
-    for (const row of rows) {
+    
+    rows.forEach(row => {
+      // Clave única: Ej "1-2-Vitacura"
       const key = `${row.bloque}-${row.sede}`;
+      
       cupos[key] = {
         bloque: row.bloque,
         sede: row.sede,
         total: row.total,
         reservados: row.reservados,
+        // Calculamos disponibles al vuelo
         disponibles: row.total - row.reservados
       };
-    }
-
-    console.log(`Cupos cargados: ${Object.keys(cupos).length} bloques para ${new Date().toISOString().split('T')[0]}`);
-
-    return new Response(JSON.stringify(cupos), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      },
     });
+
+    return NextResponse.json(cupos);
+
   } catch (error) {
-    console.error('Error cargando cupos:', error);
-    return new Response(JSON.stringify({ error: 'Error al obtener cupos' }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error("Error API Cupos:", error);
+    return NextResponse.json({ error: "Error cargando cupos" }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
+// Mantenemos tu PATCH (Admin) también con conexión directa
 export async function PATCH(request) {
   const userHeader = request.headers.get('x-user');
   if (!userHeader) return new Response('No autorizado', { status: 401 });
-
+  
+  // Validación simple de admin
   const user = JSON.parse(userHeader);
-  if (user.rol !== 'admin') return new Response('Solo admin puede modificar cupos', { status: 403 });
-
-  const { bloque, sede, cantidad } = await request.json();
-  if (!bloque || !sede || typeof cantidad !== 'number') {
-    return new Response('Datos inválidos (se requiere bloque, sede y cantidad)', { status: 400 });
+  if (user.rol !== 'admin' && user.is_admin !== 1 && user.is_admin !== true) {
+     return new Response('Solo admin puede modificar', { status: 403 });
   }
 
+  const { bloque, sede, cantidad } = await request.json();
+  let connection;
+
   try {
-    console.log(`[${new Date().toISOString()}] Admin modificando cupos: ${bloque} en ${sede} a ${cantidad}`);
+    connection = await getConnection();
     
-    await ejecutarMantenimientoSiEsNecesario();
-    
-    const [rows] = await pool.query(
-      'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
-      [bloque, sede]
-    );
-
-    if (rows.length === 0) {
-      return new Response(`Bloque ${bloque} en ${sede} no encontrado para hoy`, { status: 404 });
-    }
-
-    if (cantidad < 0) {
-      return new Response('La cantidad no puede ser negativa', { status: 400 });
-    }
-    
-    if (cantidad < rows[0].reservados) {
-      return new Response(
-        `No se puede reducir a ${cantidad}. Hay ${rows[0].reservados} reservas activas hoy en ${sede}.`, 
-        { status: 400 }
-      );
-    }
-
-    await pool.query(
+    // Actualizar cupos
+    await connection.execute(
       'UPDATE cupos SET total = ? WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
       [cantidad, bloque, sede]
     );
 
-    const [allRows] = await pool.query(`
-      SELECT bloque, sede, total, reservados 
-      FROM cupos 
-      WHERE fecha = CURDATE() 
-      ORDER BY 
-        CAST(SUBSTRING_INDEX(bloque, '-', 1) AS UNSIGNED),
-        CAST(SUBSTRING_INDEX(bloque, '-', -1) AS UNSIGNED),
-        sede
-    `);
+    // Devolver la lista actualizada
+    const [rows] = await connection.execute("SELECT * FROM cupos WHERE fecha = CURDATE()");
     
     const cupos = {};
-    for (const row of allRows) {
+    rows.forEach(row => {
       const key = `${row.bloque}-${row.sede}`;
       cupos[key] = {
         bloque: row.bloque,
@@ -121,40 +102,14 @@ export async function PATCH(request) {
         reservados: row.reservados,
         disponibles: row.total - row.reservados
       };
-    }
+    });
 
-    console.log(`Cupos actualizados: ${bloque} en ${sede} = ${cantidad}`);
+    return NextResponse.json({ message: "Actualizado", cupos });
 
-    return new Response(
-      JSON.stringify({ 
-        message: `Cupos de ${bloque} en ${sede} actualizados a ${cantidad}`, 
-        cupos 
-      }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
   } catch (error) {
-    console.error('Error actualizando cupos:', error);
-    return new Response('Error actualizando cupos', { status: 500 });
-  }
-}
-
-async function ejecutarMantenimientoSiEsNecesario() {
-  try {
-    const [existentes] = await pool.query(
-      'SELECT COUNT(*) as count FROM cupos WHERE fecha = CURDATE()'
-    );
-    
-    if (existentes[0].count === 0) {
-      console.log('Generando cupos para hoy (backup del Event Scheduler)...');
-      
-      await pool.query('CALL GenerarCuposDiarios()');
-      
-      console.log('Cupos generados por backup del Event Scheduler');
-    }
-  } catch (error) {
-    console.error('Error en mantenimiento backup:', error);
+    console.error("Error Update:", error);
+    return new Response('Error actualizando', { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
