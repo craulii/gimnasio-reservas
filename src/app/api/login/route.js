@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
-// No importamos cookies aquí, usaremos response.cookies
 
 const dbConfig = {
   host: '127.0.0.1',
@@ -26,7 +25,7 @@ export async function POST(request) {
     const email = String(rawEmail).trim().toLowerCase();
 
     if (!USM_EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: "Email no válido" }, { status: 401 });
+      return NextResponse.json({ error: "Email no válido (debe ser @usm.cl)" }, { status: 401 });
     }
 
     connection = await mysql.createConnection(dbConfig);
@@ -42,7 +41,6 @@ export async function POST(request) {
 
     const user = rows[0];
 
-    // 🛑 VALIDACIÓN NUEVA: Verificar si está baneado
     if (user.baneado === 1) {
        return NextResponse.json({ error: "Usuario bloqueado/baneado del sistema." }, { status: 403 });
     }
@@ -53,38 +51,38 @@ export async function POST(request) {
       return NextResponse.json({ error: "Credenciales incorrectas" }, { status: 401 });
     }
 
-    // --- PREPARAR DATOS DE SESIÓN ---
-    // Agregamos 'rol_usm' (tu columna 'rol') porque es vital para la USM
-    const sessionData = JSON.stringify({
+    const isAdmin = Number(user.is_admin) === 1;
+    const roleType = isAdmin ? 'admin' : 'alumno';
+
+    // 1. Preparamos el objeto de datos (consistente con lo que espera tu middleware)
+    const userData = {
       id: user.id,
       name: user.name,
       email: user.email,
-      rol_usm: user.rol, // 👈 EL ROL USM (Ej: 202104687-9)
-      role_type: user.is_admin === 1 ? 'admin' : 'alumno' // Permisos web
-    });
+      rol_usm: user.rol, // Asegúrate que tu middleware use 'rol_usm' o cámbialo a 'rol'
+      role_type: roleType
+    };
 
     const response = NextResponse.json({
       message: "Login exitoso",
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      rol_usm: user.rol,
-      rol: user.is_admin === 1 ? 'admin' : 'alumno',
-      is_admin: user.is_admin === 1
+      user: userData // Enviamos los datos para el estado del frontend
     });
 
-    response.cookies.set('user_session', sessionData, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24, // 1 día
-      path: '/'
+    // 2. 🔥 CORRECCIÓN CRÍTICA: Guardar Cookie con path '/' y el nombre correcto
+    // Usamos JSON.stringify(userData) porque tu middleware hace JSON.parse
+    response.cookies.set("user_session", JSON.stringify(userData), {
+      httpOnly: true, // Seguridad: No accesible por JS del cliente
+      secure: process.env.NODE_ENV === "production", 
+      sameSite: "lax", // 'lax' es más compatible para redirecciones iniciales
+      path: "/", // CRÍTICO: Para que sea visible en todas las rutas
+      maxAge: 60 * 60 * 24 // 1 día (puedes subirlo a 7 días si prefieres)
     });
 
     return response;
 
   } catch (error) {
     console.error("Login Error:", error);
-    return NextResponse.json({ error: "Error del servidor: " + error.message }, { status: 500 });
+    return NextResponse.json({ error: "Error del servidor" }, { status: 500 });
   } finally {
     if (connection) await connection.end();
   }

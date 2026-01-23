@@ -1,58 +1,53 @@
 import { NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
-// 1. CREDENCIALES DIRECTAS (Las mismas que usamos en el login y en el PHP)
 const dbConfig = {
   host: '127.0.0.1',
-  user: 'reservas_crauli',     
-  password: 'CrauliChris69!', 
+  user: 'reservas_crauli',
+  password: 'CrauliChris69!',
   database: 'reservas_gymusm',
   port: 3306
 };
 
-// Función auxiliar para conectar
-async function getConnection() {
-  return await mysql.createConnection(dbConfig);
-}
-
+// --- GET: OBTENER CUPOS (Público/Privado) ---
 export async function GET(request) {
   let connection;
   try {
-    // 2. Conexión DIRECTA (Bypass de lib/db.js)
-    connection = await getConnection();
+    connection = await mysql.createConnection(dbConfig);
 
-    // 3. Capturamos parametros (por si filtras por sede)
     const { searchParams } = new URL(request.url);
     const sede = searchParams.get('sede');
+    // Si no mandan fecha, usamos HOY. Si mandan, usamos esa.
+    const fecha = searchParams.get('fecha') || new Date().toISOString().split('T')[0];
 
-    let query = "SELECT * FROM cupos WHERE fecha >= CURDATE()";
-    const params = [];
+    // Consultamos solo la fecha específica para evitar sobrescribir bloques
+    let query = "SELECT * FROM cupos WHERE fecha = ?";
+    const params = [fecha];
 
     if (sede) {
       query += " AND sede = ?";
       params.push(sede);
     }
 
-    // Ordenamos para que salgan bonitos en la lista
-    query += " ORDER BY fecha ASC, bloque ASC";
+    query += " ORDER BY bloque ASC";
 
     const [rows] = await connection.execute(query, params);
 
-    // 4. Formateo de datos para el Frontend
-    // Convertimos la lista de la BDD al formato objeto { "clave": {datos} } que usa tu app
+    // Formateo tipo diccionario para acceso rápido en Frontend
     const cupos = {};
-    
     rows.forEach(row => {
-      // Clave única: Ej "1-2-Vitacura"
+      // Clave: Bloque + Sede (Ej: "1-2-Santiago")
+      // Esto facilita al frontend encontrar el cupo exacto
       const key = `${row.bloque}-${row.sede}`;
       
       cupos[key] = {
+        id: row.id,
         bloque: row.bloque,
         sede: row.sede,
         total: row.total,
         reservados: row.reservados,
-        // Calculamos disponibles al vuelo
-        disponibles: row.total - row.reservados
+        disponibles: row.total - row.reservados,
+        fecha: row.fecha // útil para validar en frontend
       };
     });
 
@@ -66,31 +61,41 @@ export async function GET(request) {
   }
 }
 
-// Mantenemos tu PATCH (Admin) también con conexión directa
+// --- PATCH: MODIFICAR CUPOS (Solo Admin) ---
 export async function PATCH(request) {
-  const userHeader = request.headers.get('x-user');
-  if (!userHeader) return new Response('No autorizado', { status: 401 });
-  
-  // Validación simple de admin
-  const user = JSON.parse(userHeader);
-  if (user.rol !== 'admin' && user.is_admin !== 1 && user.is_admin !== true) {
-     return new Response('Solo admin puede modificar', { status: 403 });
-  }
-
-  const { bloque, sede, cantidad } = await request.json();
   let connection;
-
   try {
-    connection = await getConnection();
+    // 1. SEGURIDAD
+    const userRole = request.headers.get('x-user-type');
+    const userEmail = request.headers.get('x-user');
+
+    if (!userEmail || userRole !== 'admin') {
+      return NextResponse.json({ error: 'Solo admin puede modificar cupos' }, { status: 403 });
+    }
+
+    const { bloque, sede, cantidad, fecha } = await request.json();
     
-    // Actualizar cupos
-    await connection.execute(
-      'UPDATE cupos SET total = ? WHERE bloque = ? AND sede = ? AND fecha = CURDATE()', 
-      [cantidad, bloque, sede]
+    // Si no viene fecha, asumimos hoy
+    const targetDate = fecha || new Date().toISOString().split('T')[0];
+
+    connection = await mysql.createConnection(dbConfig);
+    
+    // 2. ACTUALIZAR
+    const [result] = await connection.execute(
+      'UPDATE cupos SET total = ? WHERE bloque = ? AND sede = ? AND fecha = ?', 
+      [cantidad, bloque, sede, targetDate]
     );
 
-    // Devolver la lista actualizada
-    const [rows] = await connection.execute("SELECT * FROM cupos WHERE fecha = CURDATE()");
+    if (result.affectedRows === 0) {
+      // Si no existe, quizás deberíamos crearlo (opcional, pero seguro devolver 404 por ahora)
+      return NextResponse.json({ error: "No se encontró el bloque para esa fecha" }, { status: 404 });
+    }
+
+    // 3. DEVOLVER DATOS ACTUALIZADOS (Reutilizamos lógica del GET)
+    const [rows] = await connection.execute(
+        "SELECT * FROM cupos WHERE fecha = ?", 
+        [targetDate]
+    );
     
     const cupos = {};
     rows.forEach(row => {
@@ -104,11 +109,11 @@ export async function PATCH(request) {
       };
     });
 
-    return NextResponse.json({ message: "Actualizado", cupos });
+    return NextResponse.json({ message: "Cupos actualizados", cupos });
 
   } catch (error) {
-    console.error("Error Update:", error);
-    return new Response('Error actualizando', { status: 500 });
+    console.error("Error Update Cupos:", error);
+    return NextResponse.json({ error: 'Error actualizando' }, { status: 500 });
   } finally {
     if (connection) await connection.end();
   }

@@ -1,19 +1,33 @@
-import pool from '../../../lib/db';
+import { NextResponse } from "next/server";
+import mysql from "mysql2/promise";
 
+const dbConfig = {
+  host: '127.0.0.1',
+  user: 'reservas_crauli',
+  password: 'CrauliChris69!',
+  database: 'reservas_gymusm',
+  port: 3306
+};
+
+// --- GET: EXPORTAR A CSV ---
 export async function GET(request) {
-  const userHeader = request.headers.get('x-user');
-  if (!userHeader) return new Response('No autorizado', { status: 401 });
-
-  const user = JSON.parse(userHeader);
-  if (user.rol !== 'admin') return new Response('Solo admin', { status: 403 });
-
-  const { searchParams } = new URL(request.url);
-  const mes = searchParams.get('mes');
-  const tipo = searchParams.get('tipo') || 'completo'; 
-
+  let connection;
   try {
+    // 1. SEGURIDAD
+    const userRole = request.headers.get('x-user-type');
+    const userEmail = request.headers.get('x-user');
+
+    if (!userEmail || userRole !== 'admin') {
+      return new NextResponse('No autorizado', { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const mes = searchParams.get('mes');
+    const tipo = searchParams.get('tipo') || 'completo'; 
+
     console.log(`[EXPORTAR] Tipo: ${tipo}, Mes: ${mes || 'último mes'}`);
 
+    // 2. Lógica de Fechas
     let fechaInicio, fechaFin;
     if (mes) {
       fechaInicio = `${mes}-01`;
@@ -28,11 +42,13 @@ export async function GET(request) {
       fechaInicio = hace3Meses.toISOString().split('T')[0];
     }
 
+    connection = await mysql.createConnection(dbConfig);
     let csvContent = '';
     let fileName = `gimnasio_${tipo}_${mes || 'reciente'}.csv`;
 
+    // 3. Selección de Query según tipo
     if (tipo === 'completo') {
-      const [result] = await pool.query(`
+      const [result] = await connection.execute(`
         SELECT 
           c.fecha,
           c.sede,
@@ -43,12 +59,9 @@ export async function GET(request) {
           COUNT(r.id) as reservas_realizadas,
           SUM(CASE WHEN r.asistio = 1 THEN 1 ELSE 0 END) as asistencias,
           SUM(CASE WHEN r.asistio = 0 THEN 1 ELSE 0 END) as inasistencias,
-          ROUND(
-            CASE 
-              WHEN COUNT(r.id) > 0 THEN (SUM(CASE WHEN r.asistio = 1 THEN 1 ELSE 0 END) / COUNT(r.id)) * 100 
-              ELSE 0 
-            END, 2
-          ) as porcentaje_asistencia,
+          CASE WHEN COUNT(r.id) > 0 THEN 
+            ROUND((SUM(CASE WHEN r.asistio = 1 THEN 1 ELSE 0 END) / COUNT(r.id)) * 100, 2)
+          ELSE 0 END as porcentaje_asistencia,
           GROUP_CONCAT(DISTINCT u.name ORDER BY u.name SEPARATOR '; ') as usuarios_reservaron
         FROM cupos c
         LEFT JOIN reservas r ON c.bloque = r.bloque_horario AND c.fecha = r.fecha AND c.sede = r.sede
@@ -60,12 +73,13 @@ export async function GET(request) {
 
       csvContent = 'Fecha,Sede,Bloque,Cupos Totales,Cupos Reservados,Cupos Disponibles,Reservas Realizadas,Asistencias,Inasistencias,Porcentaje Asistencia,Usuarios\n';
       result.forEach(row => {
-        const fecha = row.fecha.toISOString().split('T')[0];
-        csvContent += `${fecha},${row.sede},${row.bloque},${row.cupos_totales},${row.cupos_reservados},${row.cupos_disponibles},${row.reservas_realizadas},${row.asistencias},${row.inasistencias},${row.porcentaje_asistencia},"${row.usuarios_reservaron || 'Sin reservas'}"\n`;
+        // Asegurar que fecha sea string
+        const fechaStr = row.fecha instanceof Date ? row.fecha.toISOString().split('T')[0] : row.fecha;
+        csvContent += `${fechaStr},${row.sede},${row.bloque},${row.cupos_totales},${row.cupos_reservados},${row.cupos_disponibles},${row.reservas_realizadas},${row.asistencias},${row.inasistencias},${row.porcentaje_asistencia},"${row.usuarios_reservaron || 'Sin reservas'}"\n`;
       });
 
     } else if (tipo === 'cupos') {
-      const [result] = await pool.query(`
+      const [result] = await connection.execute(`
         SELECT 
           fecha, 
           sede,
@@ -73,7 +87,7 @@ export async function GET(request) {
           total, 
           reservados, 
           (total - reservados) as disponibles,
-          ROUND((reservados / total) * 100, 2) as porcentaje_ocupacion
+          CASE WHEN total > 0 THEN ROUND((reservados / total) * 100, 2) ELSE 0 END as porcentaje_ocupacion
         FROM cupos 
         WHERE fecha BETWEEN ? AND ?
         ORDER BY fecha DESC, sede, bloque
@@ -81,12 +95,12 @@ export async function GET(request) {
 
       csvContent = 'Fecha,Sede,Bloque,Total,Reservados,Disponibles,Porcentaje Ocupacion\n';
       result.forEach(row => {
-        const fecha = row.fecha.toISOString().split('T')[0];
-        csvContent += `${fecha},${row.sede},${row.bloque},${row.total},${row.reservados},${row.disponibles},${row.porcentaje_ocupacion}\n`;
+        const fechaStr = row.fecha instanceof Date ? row.fecha.toISOString().split('T')[0] : row.fecha;
+        csvContent += `${fechaStr},${row.sede},${row.bloque},${row.total},${row.reservados},${row.disponibles},${row.porcentaje_ocupacion}\n`;
       });
 
     } else if (tipo === 'reservas') {
-      const [result] = await pool.query(`
+      const [result] = await connection.execute(`
         SELECT 
           r.fecha,
           r.sede,
@@ -105,19 +119,16 @@ export async function GET(request) {
 
       csvContent = 'Fecha,Sede,Bloque,Nombre,ROL,Email,Estado,Asistio,Fecha Reserva\n';
       result.forEach(row => {
-        const fecha = row.fecha.toISOString().split('T')[0];
-        const fechaReserva = row.fecha_reserva ? row.fecha_reserva.toISOString().split('T')[0] : 'N/A';
-        csvContent += `${fecha},${row.sede},${row.bloque_horario},"${row.nombre_usuario || 'Usuario eliminado'}",${row.rol || 'N/A'},${row.email},${row.estado_asistencia},${row.asistio_numerico},${fechaReserva}\n`;
+        const fechaStr = row.fecha instanceof Date ? row.fecha.toISOString().split('T')[0] : row.fecha;
+        const fechaReserva = row.fecha_reserva ? new Date(row.fecha_reserva).toISOString().split('T')[0] : 'N/A';
+        csvContent += `${fechaStr},${row.sede},${row.bloque_horario},"${row.nombre_usuario || 'Usuario eliminado'}",${row.rol || 'N/A'},${row.email},${row.estado_asistencia},${row.asistio_numerico},${fechaReserva}\n`;
       });
     }
 
-    // Agregar BOM UTF-8 para compatibilidad con Excel
+    // Agregar BOM UTF-8 para Excel
     const csvWithBOM = '\uFEFF' + csvContent;
     
-    const registros = csvContent.split('\n').length - 2;
-    console.log(`[EXPORTAR] Completado: ${fileName} (${registros} registros)`);
-
-    return new Response(csvWithBOM, {
+    return new NextResponse(csvWithBOM, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
@@ -128,33 +139,33 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('[EXPORTAR] Error:', error);
-    return new Response(JSON.stringify({ 
+    return NextResponse.json({ 
       error: 'Error exportando datos',
       message: error.message 
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }
 
+// --- POST: OBTENER MESES DISPONIBLES ---
 export async function POST(request) {
-  const userHeader = request.headers.get('x-user');
-  if (!userHeader) return new Response('No autorizado', { status: 401 });
-
-  const user = JSON.parse(userHeader);
-  if (user.rol !== 'admin') return new Response('Solo admin', { status: 403 });
-
+  let connection;
   try {
-    const [meses] = await pool.query(`
+    const userRole = request.headers.get('x-user-type');
+    if (userRole !== 'admin') {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    connection = await mysql.createConnection(dbConfig);
+
+    const [meses] = await connection.execute(`
       SELECT 
         DATE_FORMAT(fecha, '%Y-%m') as mes,
         COUNT(DISTINCT fecha) as dias_con_datos,
         MIN(fecha) as fecha_inicio,
         MAX(fecha) as fecha_fin,
-        COUNT(*) as total_registros_cupos,
-        (SELECT COUNT(*) FROM reservas WHERE DATE_FORMAT(fecha, '%Y-%m') = DATE_FORMAT(c.fecha, '%Y-%m')) as total_reservas,
-        (SELECT COUNT(DISTINCT sede) FROM cupos WHERE DATE_FORMAT(fecha, '%Y-%m') = DATE_FORMAT(c.fecha, '%Y-%m')) as sedes_activas
+        COUNT(*) as total_registros_cupos
       FROM cupos c
       WHERE fecha < DATE_FORMAT(CURDATE(), '%Y-%m-01')
       GROUP BY DATE_FORMAT(fecha, '%Y-%m')
@@ -162,32 +173,31 @@ export async function POST(request) {
       LIMIT 12
     `);
 
-    // Formatear meses para mejor presentación
+    // Formatear meses para el frontend
     const mesesFormateados = meses.map(m => {
       const [year, month] = m.mes.split('-');
-      const nombreMes = new Date(year, month - 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+      // Creamos fecha usando UTC para evitar desfases de zona horaria al solo querer el nombre
+      const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const nombreMes = dateObj.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
+      
       return {
         ...m,
         nombre: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)
       };
     });
 
-    return new Response(JSON.stringify({
+    return NextResponse.json({
       meses_disponibles: mesesFormateados,
       total_meses: meses.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
     console.error('[EXPORTAR] Error obteniendo meses:', error);
-    return new Response(JSON.stringify({ 
+    return NextResponse.json({ 
       error: 'Error interno',
       message: error.message 
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

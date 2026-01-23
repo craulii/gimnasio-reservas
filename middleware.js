@@ -1,53 +1,81 @@
 import { NextResponse } from 'next/server';
 
+const PUBLIC_PATHS = [
+  '/api/login',
+  '/api/auth/register',
+  '/api/register',
+  '/api/auth/check', // Crucial para que el frontend verifique sesión sin error rojo
+  '/_next',
+  '/static'
+];
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // 1. ZONA PÚBLICA
-  if (pathname.startsWith('/api/login') || 
-     (pathname.startsWith('/api/cupos') && request.method === 'GET') ||
-      pathname.startsWith('/_next') || 
-      pathname.startsWith('/static')) {
-      return NextResponse.next();
+  // 1. DETERMINAR SI ES RUTA PÚBLICA O ARCHIVO ESTÁTICO
+  const isPublicPath = PUBLIC_PATHS.some(path => pathname.startsWith(path));
+  const isPublicGetCupos = pathname.startsWith('/api/cupos') && request.method === 'GET';
+  const isStaticFile = pathname.includes('.');
+
+  // Si es pública, dejamos pasar sin revisar cookies
+  if (isPublicPath || isPublicGetCupos || isStaticFile) {
+    return NextResponse.next();
   }
 
-  // 2. VERIFICACIÓN DE SESIÓN
+  // 2. VERIFICAR SESIÓN (PARA RUTAS PROTEGIDAS)
   const sessionCookie = request.cookies.get('user_session');
-
+  
   if (!sessionCookie) {
+    // Si la petición es a la API, respondemos con JSON para que el fetch no explote
     if (pathname.startsWith('/api/')) {
-        return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'No autorizado. Debes iniciar sesión.' }, 
+        { status: 401 }
+      );
     }
+    // Si es una página (/admin o /estudiante), redirigimos al login (Home)
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // 3. TRADUCCIÓN (Inyectar datos vitales a la API)
+  // 3. VALIDAR Y PASAR DATOS DE SESIÓN A LAS RUTAS
   try {
     const sessionData = JSON.parse(sessionCookie.value);
     
-    const requestHeaders = new Headers(request.headers);
-    
-    // 👇 AQUI PASAMOS LOS DATOS CLAVE A LA API
-    requestHeaders.set('x-user', sessionData.email);        // Identificador Email
-    requestHeaders.set('x-user-rol', sessionData.rol_usm);  // Identificador ROL USM (Ej: 202104687-9)
-    requestHeaders.set('x-user-type', sessionData.role_type); // Permiso (admin/alumno)
-    
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
+    // Verificación de integridad de la cookie
+    if (!sessionData.email || !sessionData.role_type) {
+      throw new Error('Sesión incompleta');
+    }
 
+    const requestHeaders = new Headers(request.headers);
+    // Inyectamos los datos para que los archivos route.js los lean con request.headers.get()
+    requestHeaders.set('x-user', sessionData.email);
+    requestHeaders.set('x-user-rol', sessionData.rol_usm || '');
+    requestHeaders.set('x-user-type', sessionData.role_type);
+    
+    // Importante: También protegemos el acceso cruzado de roles aquí mismo
+    if (pathname.startsWith('/admin') && sessionData.role_type !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    return NextResponse.next({
+      request: { headers: requestHeaders }
+    });
+    
   } catch (error) {
+    console.error('Error en middleware:', error.message);
+    // Si la cookie es inválida o está corrupta, la limpiamos y redirigimos
     const response = NextResponse.redirect(new URL('/', request.url));
     response.cookies.delete('user_session');
     return response;
   }
 }
 
+// 4. CONFIGURACIÓN DEL MATCHER
 export const config = {
   matcher: [
+    // Protege todas las APIs (excepto las públicas arriba)
     '/api/:path*',
+    // Protege las rutas de navegación de alumnos y admin
     '/estudiante/:path*',
     '/admin/:path*'
   ]

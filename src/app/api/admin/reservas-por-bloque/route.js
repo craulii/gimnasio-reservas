@@ -1,65 +1,61 @@
-import pool from "../../../lib/db";
+import { NextResponse } from "next/server";
+import mysql from "mysql2/promise";
+
+const dbConfig = {
+  host: '127.0.0.1',
+  user: 'reservas_crauli',
+  password: 'CrauliChris69!',
+  database: 'reservas_gymusm',
+  port: 3306
+};
 
 export async function GET(request) {
-  const userHeader = request.headers.get("x-user");
-  if (!userHeader) return new Response("No autorizado", { status: 401 });
-
-  const user = JSON.parse(userHeader);
-  if (user.rol !== "admin") return new Response("Solo admin", { status: 403 });
-
+  let connection;
   try {
-    console.log("=== CARGANDO RESERVAS DE HOY ===");
-    console.log("Usuario que hace petición:", user);
+    // 1. SEGURIDAD: Verificar headers del Middleware
+    const userRole = request.headers.get("x-user-type");
+    const userEmail = request.headers.get("x-user");
 
+    if (!userEmail || userRole !== 'admin') {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    console.log("=== CARGANDO RESERVAS DE HOY (ADMIN) ===");
+
+    connection = await mysql.createConnection(dbConfig);
+
+    // 2. QUERY: Traer reservas de hoy con datos del usuario
     const query = `
-      SELECT r.bloque_horario, r.sede, r.fecha, u.name, u.rol, r.email, r.asistio
+      SELECT 
+        r.bloque_horario, 
+        r.sede, 
+        r.fecha, 
+        u.name, 
+        u.rol, 
+        r.email, 
+        r.asistio
       FROM reservas r
       LEFT JOIN users u ON r.email = u.email
       WHERE r.fecha = CURDATE()
       ORDER BY r.sede, r.bloque_horario, u.name
     `;
 
-    console.log("Ejecutando query para HOY (CURDATE())");
-    const [rows] = await pool.query(query);
-    console.log("RESULTADOS encontrados:", rows.length);
-    console.log("Datos:", rows);
+    const [rows] = await connection.execute(query);
+    
+    console.log(`Reservas encontradas: ${rows.length}`);
 
-    const reservasPorBloque = {};
+    // 3. RETORNO DIRECTO (ARRAY)
+    // Devolvemos el array 'rows' directamente para que el .map() del frontend funcione.
+    // Si devolvemos un objeto {}, el frontend fallará con "map is not a function".
+    return NextResponse.json(rows);
 
-    rows.forEach((row) => {
-      if (!reservasPorBloque[row.bloque_horario]) {
-        reservasPorBloque[row.bloque_horario] = [];
-      }
-
-      reservasPorBloque[row.bloque_horario].push({
-        nombre: row.name,
-        email: row.email,
-        rol: row.rol,  // ← AGREGADO
-        sede: row.sede,
-        asistio: row.asistio,
-        fecha: row.fecha,
-      });
-    });
-
-    console.log("RESULTADO FINAL:", reservasPorBloque);
-    console.log("=== FIN CARGA RESERVAS ===");
-
-    return new Response(JSON.stringify(reservasPorBloque), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
   } catch (error) {
-    console.error("Error completo en reservas-por-bloque:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Error interno",
-        message: error.message,
-        stack: error.stack,
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    console.error("Error en reservas-por-bloque:", error);
+    return NextResponse.json({ 
+        error: "Error interno", 
+        message: error.message 
+    }, { status: 500 });
+  } finally {
+    if (connection) await connection.end();
   }
 }

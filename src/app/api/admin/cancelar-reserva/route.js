@@ -1,80 +1,81 @@
-import pool from "../../../lib/db";
+import { NextResponse } from "next/server";
+import mysql from "mysql2/promise";
+
+const dbConfig = {
+  host: '127.0.0.1',
+  user: 'reservas_crauli',
+  password: 'CrauliChris69!',
+  database: 'reservas_gymusm',
+  port: 3306
+};
 
 export async function DELETE(request) {
-  const userHeader = request.headers.get("x-user");
-  if (!userHeader) return new Response("No autorizado", { status: 401 });
-
-  const user = JSON.parse(userHeader);
-  if (user.rol !== "admin") return new Response("Solo admin", { status: 403 });
-
-  const { email, bloque_horario, sede, fecha } = await request.json();
-
-  if (!email || !bloque_horario || !sede || !fecha) {
-    return new Response("Faltan datos requeridos", { status: 400 });
-  }
-
+  let connection;
   try {
-    console.log("=== CANCELANDO RESERVA ===");
-    console.log("Email:", email);
-    console.log("Bloque:", bloque_horario);
-    console.log("Sede:", sede);
-    console.log("Fecha recibida:", fecha);
+    // 1. SEGURIDAD: Verificar headers del Middleware
+    // El middleware ya valida la sesión, aquí verificamos el ROL.
+    const userRole = request.headers.get("x-user-type"); // Viene como string 'admin' o 'alumno'
+    const userEmail = request.headers.get("x-user");
 
+    if (!userEmail || userRole !== 'admin') {
+      return NextResponse.json({ error: "Acceso denegado. Solo administradores." }, { status: 403 });
+    }
+
+    const { email, bloque_horario, sede, fecha } = await request.json();
+
+    if (!email || !bloque_horario || !sede || !fecha) {
+      return NextResponse.json({ error: "Faltan datos requeridos" }, { status: 400 });
+    }
+
+    console.log(`[ADMIN DELETE] Eliminando: ${email} - ${bloque_horario} - ${sede} - ${fecha}`);
+
+    // Formatear fecha (YYYY-MM-DD)
     let fechaFormateada = fecha;
     if (fecha.includes("T")) {
       fechaFormateada = fecha.split("T")[0];
     }
 
-    console.log("Fecha formateada para consulta:", fechaFormateada);
+    // 2. CONEXIÓN Y TRANSACCIÓN
+    connection = await mysql.createConnection(dbConfig);
+    await connection.beginTransaction();
 
-    await pool.query("BEGIN");
-
-    const [result] = await pool.query(
+    // A. Eliminar la reserva
+    // Usamos DATE() para ignorar horas si las hubiera
+    const [result] = await connection.execute(
       "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND DATE(fecha) = DATE(?)",
       [email, bloque_horario, sede, fechaFormateada]
     );
 
     console.log("Reservas eliminadas:", result.affectedRows);
 
+    // B. Si se borró algo, liberar el cupo
     if (result.affectedRows > 0) {
-      const fechaHoy = new Date().toISOString().split("T")[0];
-      if (fechaFormateada === fechaHoy) {
-        await pool.query(
-          "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
-          [bloque_horario, sede]
-        );
-
-        console.log("Contador de cupos actualizado");
-      }
+      // Actualizamos la tabla de cupos para esa fecha específica
+      await connection.execute(
+        "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = ?",
+        [bloque_horario, sede, fechaFormateada]
+      );
+      console.log("Cupo liberado correctamente.");
     }
 
-    await pool.query("COMMIT");
+    // C. Confirmar cambios
+    await connection.commit();
 
-    return new Response(
-      JSON.stringify({
-        message:
-          result.affectedRows > 0
-            ? "Reserva cancelada exitosamente"
-            : "No se encontró la reserva para cancelar",
-        cancelada: result.affectedRows > 0,
-      }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return NextResponse.json({
+      message: result.affectedRows > 0 
+        ? "Reserva cancelada exitosamente" 
+        : "No se encontró la reserva para cancelar",
+      cancelada: result.affectedRows > 0
+    });
+
   } catch (error) {
-    await pool.query("ROLLBACK");
+    if (connection) await connection.rollback();
     console.error("Error cancelando reserva:", error);
-    return new Response(
-      JSON.stringify({
-        error: "Error cancelando reserva",
-        message: error.message,
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+    return NextResponse.json(
+      { error: "Error interno al cancelar", details: error.message },
+      { status: 500 }
     );
+  } finally {
+    if (connection) await connection.end();
   }
 }
