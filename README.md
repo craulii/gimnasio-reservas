@@ -10,7 +10,62 @@ Sistema web de reservas de cupos diarios para el gimnasio de la Universidad Tecn
 - **Backend:** Next.js API Routes (20 endpoints)
 - **Base de datos:** MySQL (mysql2/promise, connection pool)
 - **Auth:** Cookies httpOnly + middleware con roles (admin/alumno)
-- **Hosting:** ninjahost.cl (standalone build)
+- **Hosting primario:** ninjahost.cl (standalone build)
+- **Hosting backup:** Vercel (deploy automatico desde GitHub)
+
+## Despliegue
+
+### ninjahost.cl (produccion actual)
+- Build standalone (`output: 'standalone'` en next.config.mjs)
+- MySQL local (`DB_HOST=127.0.0.1`)
+- Dominio: `reservasgimnasiosantiago.cl`
+
+### Vercel (backup / segundo deploy)
+- **Proyecto:** `gimnasio-reservas` en cuenta `craulis-projects`
+- **URL Vercel:** `gimnasio-reservas-craulis-projects.vercel.app`
+- **Deploy automatico:** cada `git push` a `master` dispara build en Vercel
+- **Framework:** Next.js (detectado automaticamente)
+- **Region:** iad1 (US East)
+- **Dominio custom:** `reservasgimnasiosantiago.cl` agregado (requiere cambio de DNS para activar)
+
+#### Estado actual de Vercel
+- Build: OK (funciona correctamente)
+- Frontend: OK (carga sin problemas)
+- API/BD: **PENDIENTE** — MySQL en ninjahost no acepta conexiones remotas aun
+
+#### Pasos pendientes para activar BD en Vercel
+
+1. **Habilitar Remote MySQL en cPanel de ninjahost:**
+   - Ir a cPanel → Remote MySQL
+   - Agregar `%` (cualquier host) como host permitido
+   - URL cPanel: `nuevo10498.dedicados.cl` (IP: `3.129.105.148`)
+
+2. **Actualizar variable de entorno en Vercel:**
+   - Ir a Vercel → Settings → Environment Variables
+   - Cambiar `DB_HOST` de `127.0.0.1` a `201.148.104.98` (IP publica del servidor ninjahost)
+
+3. **Redeploy en Vercel** (se puede hacer desde el dashboard o con `git push`)
+
+#### Para apuntar el dominio a Vercel (opcional)
+
+Si se quiere que `reservasgimnasiosantiago.cl` apunte a Vercel en vez de ninjahost, configurar estos DNS en el panel de ninjahost:
+
+| Tipo | Nombre | Valor |
+|------|--------|-------|
+| A | @ | `76.76.21.21` |
+| CNAME | www | `cname.vercel-dns.com` |
+
+> **Nota:** Mientras no se cambien los DNS, el dominio sigue apuntando a ninjahost. Vercel queda accesible solo por su URL `.vercel.app`.
+
+#### Variables de entorno configuradas en Vercel
+
+| Variable | Valor actual | Nota |
+|----------|-------------|------|
+| DB_HOST | `127.0.0.1` | **Cambiar a `201.148.104.98`** cuando Remote MySQL este habilitado |
+| DB_PORT | `3306` | OK |
+| DB_USER | `reservas_crauli` | OK |
+| DB_PASSWORD | (configurado) | OK |
+| DB_NAME | `reservas_gymusm` | OK |
 
 ## Estructura del proyecto
 
