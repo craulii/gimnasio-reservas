@@ -81,7 +81,7 @@ export async function POST(request) {
   } catch (error) {
     console.error("[REGISTER] Error:", error);
 
-    if (error?.code === "ER_DUP_ENTRY") {
+    if (error?.code === "23505") {
       return NextResponse.json({ error: "Este email o RUT ya está registrado" }, { status: 409 });
     }
 

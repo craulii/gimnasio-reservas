@@ -30,7 +30,7 @@ export async function DELETE(request) {
     await connection.beginTransaction();
 
     const [result] = await connection.execute(
-      "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND DATE(fecha) = DATE(?)",
+      "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha::DATE = ?::DATE",
       [email, bloque_horario, sede, fechaFormateada]
     );
 

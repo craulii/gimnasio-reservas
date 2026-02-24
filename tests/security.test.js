@@ -14,20 +14,8 @@ const { describe, it, assert, run, readFile, findFiles, relPath } = require('./r
 describe('DB centralizada (src/lib/db.js)', () => {
   const db = readFile('src/lib/db.js');
 
-  it('usa process.env.DB_USER', () => {
-    assert.includes(db, 'process.env.DB_USER');
-  });
-
-  it('usa process.env.DB_PASSWORD', () => {
-    assert.includes(db, 'process.env.DB_PASSWORD');
-  });
-
-  it('usa process.env.DB_NAME', () => {
-    assert.includes(db, 'process.env.DB_NAME');
-  });
-
-  it('usa process.env.DB_HOST', () => {
-    assert.includes(db, 'process.env.DB_HOST');
+  it('usa process.env.DATABASE_URL', () => {
+    assert.includes(db, 'process.env.DATABASE_URL');
   });
 
   it('no tiene password hardcodeado "CrauliChris69"', () => {
@@ -42,8 +30,23 @@ describe('DB centralizada (src/lib/db.js)', () => {
     assert.includes(db, 'export default pool');
   });
 
-  it('usa createPool (no createConnection)', () => {
-    assert.includes(db, 'createPool');
+  it('usa pg.Pool', () => {
+    assert.includes(db, 'pg.Pool');
+  });
+
+  it('convierte placeholders ? a $N', () => {
+    assert.includes(db, 'convertPlaceholders');
+  });
+
+  it('wrapper retorna [rows, fields] como mysql2', () => {
+    assert.includes(db, 'wrapResult');
+  });
+
+  it('soporta getConnection con transacciones', () => {
+    assert.includes(db, 'getConnection');
+    assert.includes(db, 'beginTransaction');
+    assert.includes(db, 'commit');
+    assert.includes(db, 'rollback');
   });
 });
 
@@ -90,7 +93,7 @@ describe('Imports centralizados de pool', () => {
   for (const file of routeFiles) {
     const content = readFile(relPath(file));
     const rel = relPath(file);
-    const usesDB = content.includes('pool') || content.includes('mysql');
+    const usesDB = content.includes('pool') || content.includes('pg');
 
     if (usesDB) {
       it(`${rel} importa desde @/lib/db`, () => {
@@ -171,20 +174,8 @@ describe('Archivos de entorno (.env / .gitignore)', () => {
     assert.notIncludes(envExample, 'CrauliChris69');
   });
 
-  it('.env.example tiene DB_HOST', () => {
-    assert.includes(envExample, 'DB_HOST');
-  });
-
-  it('.env.example tiene DB_USER', () => {
-    assert.includes(envExample, 'DB_USER');
-  });
-
-  it('.env.example tiene DB_PASSWORD', () => {
-    assert.includes(envExample, 'DB_PASSWORD');
-  });
-
-  it('.env.example tiene DB_NAME', () => {
-    assert.includes(envExample, 'DB_NAME');
+  it('.env.example tiene DATABASE_URL', () => {
+    assert.includes(envExample, 'DATABASE_URL');
   });
 
   const gitignore = readFile('.gitignore');

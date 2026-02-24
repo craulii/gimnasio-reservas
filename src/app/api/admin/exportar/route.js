@@ -51,7 +51,7 @@ export async function GET(request) {
           CASE WHEN COUNT(r.id) > 0 THEN
             ROUND((SUM(CASE WHEN r.asistio = 1 THEN 1 ELSE 0 END) / COUNT(r.id)) * 100, 2)
           ELSE 0 END as porcentaje_asistencia,
-          GROUP_CONCAT(DISTINCT u.name ORDER BY u.name SEPARATOR '; ') as usuarios_reservaron
+          STRING_AGG(DISTINCT u.name, '; ' ORDER BY u.name) as usuarios_reservaron
         FROM cupos c
         LEFT JOIN reservas r ON c.bloque = r.bloque_horario AND c.fecha = r.fecha AND c.sede = r.sede
         LEFT JOIN users u ON r.email = u.email
@@ -144,14 +144,14 @@ export async function POST(request) {
 
     const [meses] = await pool.execute(`
       SELECT
-        DATE_FORMAT(fecha, '%Y-%m') as mes,
+        TO_CHAR(fecha, 'YYYY-MM') as mes,
         COUNT(DISTINCT fecha) as dias_con_datos,
         MIN(fecha) as fecha_inicio,
         MAX(fecha) as fecha_fin,
         COUNT(*) as total_registros_cupos
       FROM cupos c
-      WHERE fecha < DATE_FORMAT(CURDATE(), '%Y-%m-01')
-      GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+      WHERE fecha < DATE_TRUNC('month', CURRENT_DATE)
+      GROUP BY TO_CHAR(fecha, 'YYYY-MM')
       ORDER BY mes DESC
       LIMIT 12
     `);

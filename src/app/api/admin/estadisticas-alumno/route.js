@@ -43,10 +43,10 @@ export async function GET(request) {
       globalDateCondition = "WHERE fecha BETWEEN ? AND ?";
       globalDateParams = [fechaInicio, fechaFin];
     } else {
-      dateCondition = "AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+      dateCondition = "AND fecha >= CURRENT_DATE - INTERVAL '30 days'";
       dateParams = [];
 
-      globalDateCondition = "WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+      globalDateCondition = "WHERE fecha >= CURRENT_DATE - INTERVAL '30 days'";
       globalDateParams = [];
     }
 

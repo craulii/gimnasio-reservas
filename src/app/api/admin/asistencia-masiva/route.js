@@ -37,14 +37,16 @@ export async function POST(request) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
+  let connection;
   try {
-    await pool.query("BEGIN");
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
 
     for (const asistencia of asistencias) {
       const { email, asistio } = asistencia;
 
       // Obtener el estado ANTERIOR de la asistencia
-      const [reservaAnterior] = await pool.query(
+      const [reservaAnterior] = await connection.query(
         "SELECT asistio FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = ?",
         [email, bloque_horario, sede, fecha]
       );
@@ -57,7 +59,7 @@ export async function POST(request) {
       const asistioAnterior = reservaAnterior[0].asistio;
 
       // Actualizar asistencia en reserva
-      await pool.query(
+      await connection.query(
         "UPDATE reservas SET asistio = ? WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = ?",
         [asistio ? 1 : 0, email, bloque_horario, sede, fecha]
       );
@@ -66,38 +68,38 @@ export async function POST(request) {
 
       // Caso 1: Era NULL o 1 (presente/pendiente) y ahora es 0 (ausente) -> SUMAR FALTA
       if ((asistioAnterior === null || asistioAnterior === 1) && !asistio) {
-        await pool.query(
+        await connection.query(
           "UPDATE users SET faltas = faltas + 1 WHERE email = ?",
           [email]
         );
         console.log(`[FALTA AGREGADA] ${email}`);
 
         // Verificar Baneo (3 faltas)
-        const [userRow] = await pool.query("SELECT faltas FROM users WHERE email = ?", [email]);
+        const [userRow] = await connection.query("SELECT faltas FROM users WHERE email = ?", [email]);
         if (userRow.length > 0 && userRow[0].faltas >= 3) {
-          await pool.query("UPDATE users SET baneado = 1 WHERE email = ?", [email]);
+          await connection.query("UPDATE users SET baneado = 1 WHERE email = ?", [email]);
           console.log(`[BANEADO] ${email}`);
         }
       }
 
       // Caso 2: Era 0 (ausente) y ahora es 1 (presente) -> RESTAR FALTA (Corregir error)
       else if (asistioAnterior === 0 && asistio) {
-        await pool.query(
+        await connection.query(
           "UPDATE users SET faltas = GREATEST(faltas - 1, 0) WHERE email = ?",
           [email]
         );
         console.log(`[FALTA CORREGIDA] ${email}`);
 
         // Desbanear si baja de 3 faltas
-        const [userRow] = await pool.query("SELECT faltas FROM users WHERE email = ?", [email]);
+        const [userRow] = await connection.query("SELECT faltas FROM users WHERE email = ?", [email]);
         if (userRow.length > 0 && userRow[0].faltas < 3) {
-          await pool.query("UPDATE users SET baneado = 0 WHERE email = ?", [email]);
+          await connection.query("UPDATE users SET baneado = 0 WHERE email = ?", [email]);
           console.log(`[DESBANEADO] ${email}`);
         }
       }
     }
 
-    await pool.query("COMMIT");
+    await connection.commit();
 
     return NextResponse.json({
       message: "Asistencia registrada exitosamente",
@@ -105,9 +107,11 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    await pool.query("ROLLBACK");
+    if (connection) await connection.rollback();
     console.error("Error al registrar asistencia masiva:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  } finally {
+    if (connection) connection.release();
   }
 }
 

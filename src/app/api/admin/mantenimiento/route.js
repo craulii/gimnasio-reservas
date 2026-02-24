@@ -20,7 +20,7 @@ const SEDES_DEFAULT = ['Santiago', 'Viña'];
 
 async function generarCuposDelDia(connection) {
   const [existentes] = await connection.execute(
-    "SELECT COUNT(*) as count FROM cupos WHERE fecha = CURDATE()"
+    "SELECT COUNT(*) as count FROM cupos WHERE fecha = CURRENT_DATE"
   );
 
   if (existentes[0].count > 0) {
@@ -33,7 +33,7 @@ async function generarCuposDelDia(connection) {
   for (const sede of SEDES_DEFAULT) {
     for (const config of BLOQUES_DEFAULT) {
       await connection.execute(
-        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, CURDATE())",
+        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, CURRENT_DATE)",
         [config.bloque, sede, config.cupos]
       );
     }
@@ -54,7 +54,7 @@ async function sincronizarContadores(connection) {
       AND r.fecha = c.fecha
       AND r.sede = c.sede
     )
-    WHERE c.fecha = CURDATE()
+    WHERE c.fecha = CURRENT_DATE
   `);
 
   console.log("Contadores sincronizados.");
@@ -65,8 +65,8 @@ async function limpiezaSemanal(connection) {
 
   const [datosViejos] = await connection.execute(`
     SELECT
-      (SELECT COUNT(*) FROM cupos WHERE fecha <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)) as cupos_viejos,
-      (SELECT COUNT(*) FROM reservas WHERE fecha <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)) as reservas_viejas
+      (SELECT COUNT(*) FROM cupos WHERE fecha <= CURRENT_DATE - INTERVAL '6 months') as cupos_viejos,
+      (SELECT COUNT(*) FROM reservas WHERE fecha <= CURRENT_DATE - INTERVAL '6 months') as reservas_viejas
   `);
 
   const { cupos_viejos, reservas_viejas } = datosViejos[0];
@@ -82,11 +82,11 @@ async function limpiezaSemanal(connection) {
 
   try {
     const [reservasResult] = await connection.execute(
-      "DELETE FROM reservas WHERE fecha <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"
+      "DELETE FROM reservas WHERE fecha <= CURRENT_DATE - INTERVAL '6 months'"
     );
 
     const [cuposResult] = await connection.execute(
-      "DELETE FROM cupos WHERE fecha <= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)"
+      "DELETE FROM cupos WHERE fecha <= CURRENT_DATE - INTERVAL '6 months'"
     );
 
     await connection.commit();

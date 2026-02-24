@@ -29,7 +29,7 @@ export async function GET(request) {
         r.asistio
       FROM reservas r
       LEFT JOIN users u ON r.email = u.email
-      WHERE r.fecha = CURDATE()
+      WHERE r.fecha = CURRENT_DATE
     `;
     const params = [];
 

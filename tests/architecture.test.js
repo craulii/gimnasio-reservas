@@ -48,6 +48,7 @@ describe('Patrón de transacciones', () => {
     'src/app/api/admin/cancelar-reserva/route.js',
     'src/app/api/admin/boton-panico/route.js',
     'src/app/api/admin/procesar-ausencias/route.js',
+    'src/app/api/admin/asistencia-masiva/route.js',
     'src/app/api/reservas/route.js',
   ];
 
@@ -187,14 +188,14 @@ describe('Archivos olvidados ahora migrados', () => {
 });
 
 // ============================================================
-// 7. Next.js configuración standalone
+// 7. Next.js configuración (Vercel - sin standalone)
 // ============================================================
 
-describe('Configuración Next.js standalone', () => {
+describe('Configuración Next.js (Vercel)', () => {
   const config = readFile('next.config.mjs');
 
-  it('output está configurado como standalone', () => {
-    assert.includes(config, 'standalone');
+  it('no tiene output standalone (Vercel no lo necesita)', () => {
+    assert.notIncludes(config, 'standalone');
   });
 });
 
@@ -222,18 +223,19 @@ describe('Autorización en endpoints admin', () => {
 // 9. No hay mysql.createConnection directos
 // ============================================================
 
-describe('Sin mysql.createConnection directo', () => {
+describe('Sin imports directos de DB driver', () => {
   const routeFiles = findFiles('src/app/api', /route\.js$/);
 
   for (const file of routeFiles) {
     const content = readFile(relPath(file));
     const rel = relPath(file);
 
-    it(`${rel} no usa mysql.createConnection`, () => {
-      assert.notIncludes(content, 'mysql.createConnection');
+    it(`${rel} no importa pg directamente`, () => {
+      assert.notIncludes(content, "from 'pg'");
+      assert.notIncludes(content, 'from "pg"');
     });
 
-    it(`${rel} no usa mysql2/promise directo`, () => {
+    it(`${rel} no importa mysql2 directamente`, () => {
       assert.notIncludes(content, 'from "mysql2/promise"');
       assert.notIncludes(content, "from 'mysql2/promise'");
     });

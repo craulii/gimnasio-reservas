@@ -35,7 +35,7 @@ export async function GET(request) {
       queryBloques += " AND fecha BETWEEN ? AND ?";
       params.push(fechaInicio, fechaFin);
     } else {
-      queryBloques += " AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+      queryBloques += " AND fecha >= CURRENT_DATE - INTERVAL '30 days'";
     }
 
     queryBloques += " GROUP BY bloque_horario ORDER BY bloque_horario";
@@ -59,7 +59,7 @@ export async function GET(request) {
     if (fechaInicio && fechaFin) {
         querySedes += " AND fecha BETWEEN ? AND ?";
     } else {
-        querySedes += " AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+        querySedes += " AND fecha >= CURRENT_DATE - INTERVAL '30 days'";
     }
 
     querySedes += " GROUP BY sede ORDER BY sede";
@@ -82,7 +82,7 @@ export async function GET(request) {
     if (fechaInicio && fechaFin) {
         queryResumen += " AND fecha BETWEEN ? AND ?";
     } else {
-        queryResumen += " AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+        queryResumen += " AND fecha >= CURRENT_DATE - INTERVAL '30 days'";
     }
 
     const [resumen] = await pool.execute(queryResumen, params);

@@ -90,7 +90,7 @@ export async function POST(request) {
     try {
       // F. Verificar Cupos Disponibles (con lock FOR UPDATE)
       const [cuposResult] = await connection.execute(
-        'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = CURDATE() FOR UPDATE',
+        'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = CURRENT_DATE FOR UPDATE',
         [bloque_horario, sede]
       );
 
@@ -107,7 +107,7 @@ export async function POST(request) {
 
       // G. Verificar si ya reservó hoy (1 reserva diaria) - dentro de la transacción
       const [reservasHoy] = await connection.execute(
-        `SELECT id FROM reservas WHERE email = ? AND fecha = CURDATE()`,
+        `SELECT id FROM reservas WHERE email = ? AND fecha = CURRENT_DATE`,
         [user.email]
       );
 
@@ -118,12 +118,12 @@ export async function POST(request) {
 
       // H. INSERT + UPDATE atómicos
       await connection.execute(
-          "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, CURDATE(), ?, ?, 0)",
+          "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, CURRENT_DATE, ?, ?, 0)",
           [user.email, bloque_horario, sede]
       );
 
       await connection.execute(
-          "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
+          "UPDATE cupos SET reservados = reservados + 1 WHERE bloque = ? AND sede = ? AND fecha = CURRENT_DATE",
           [bloque_horario, sede]
       );
 
@@ -169,7 +169,7 @@ export async function GET(request) {
     const user = userRows[0];
 
     const [reservas] = await pool.execute(
-      "SELECT * FROM reservas WHERE email = ? AND fecha = CURDATE()",
+      "SELECT * FROM reservas WHERE email = ? AND fecha = CURRENT_DATE",
       [user.email]
     );
 
@@ -210,7 +210,7 @@ export async function DELETE(request) {
 
     try {
         const [result] = await connection.execute(
-          "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = CURDATE()",
+          "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = CURRENT_DATE",
           [email, bloque_horario, sede]
         );
 
@@ -220,7 +220,7 @@ export async function DELETE(request) {
         }
 
         await connection.execute(
-          "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = CURDATE()",
+          "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = CURRENT_DATE",
           [bloque_horario, sede]
         );
 

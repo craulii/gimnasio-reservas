@@ -27,7 +27,7 @@ export async function GET(request) {
       dateCondition = "AND fecha BETWEEN ? AND ?";
       dateParams.push(fechaInicio, fechaFin);
     } else {
-      dateCondition = "AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
+      dateCondition = "AND fecha >= CURRENT_DATE - INTERVAL '30 days'";
     }
 
     // QUERY 1: GENERALES
@@ -53,7 +53,7 @@ export async function GET(request) {
         COUNT(*) as reservas,
         COALESCE(SUM(asistio), 0) as asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
-        DAYNAME(fecha) as dia_semana
+        TRIM(TO_CHAR(fecha, 'Day')) as dia_semana
       FROM reservas
       WHERE bloque_horario = ? ${dateCondition}
       GROUP BY fecha
@@ -82,15 +82,15 @@ export async function GET(request) {
     // QUERY 4: DÍA DE LA SEMANA
     const [estadisticasDiaSemana] = await pool.execute(
       `SELECT
-        DAYNAME(fecha) as dia_semana,
+        TRIM(TO_CHAR(fecha, 'Day')) as dia_semana,
         COUNT(*) as total_reservas,
         COALESCE(SUM(asistio), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
         CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*) / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_por_dia
       FROM reservas
       WHERE bloque_horario = ? ${dateCondition}
-      GROUP BY DAYOFWEEK(fecha), DAYNAME(fecha)
-      ORDER BY DAYOFWEEK(fecha)`,
+      GROUP BY EXTRACT(DOW FROM fecha), TRIM(TO_CHAR(fecha, 'Day'))
+      ORDER BY EXTRACT(DOW FROM fecha)`,
       dateParams
     );
 
@@ -102,7 +102,7 @@ export async function GET(request) {
         COALESCE(SUM(asistio), 0) as asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia
       FROM reservas
-      WHERE bloque_horario = ? AND fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      WHERE bloque_horario = ? AND fecha >= CURRENT_DATE - INTERVAL '7 days'
       GROUP BY fecha
       ORDER BY fecha`,
       [bloque]
