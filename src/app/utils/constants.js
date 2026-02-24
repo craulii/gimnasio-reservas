@@ -254,3 +254,35 @@ export const VALIDACIONES = {
   PASSWORD_MIN_LENGTH: 6,
   NAME_MIN_LENGTH: 3
 };
+
+// Issue #14: Validación de formato de bloque horario
+export const BLOQUE_REGEX = /^\d{1,2}-\d{1,2}$/;
+
+// Issue #15: Horarios límite centralizados (antes hardcodeados en procesar-ausencias)
+// 15 min después de inicio del bloque
+export const HORARIOS_LIMITE = {
+  "1-2": "08:30:00",
+  "3-4": "09:55:00",
+  "5-6": "11:20:00",
+  "7-8": "12:45:00",
+  "9-10": "14:55:00",
+  "11-12": "16:20:00",
+  "13-14": "17:45:00",
+  "15-16": "19:10:00",
+  "17-18": "20:35:00",
+};
+
+// Issue #7: Helpers de timezone Chile
+export function getFechaChile() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+}
+
+export function getHoraChile() {
+  return new Date().toLocaleTimeString('es-CL', {
+    timeZone: 'America/Santiago',
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}

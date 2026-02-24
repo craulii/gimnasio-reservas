@@ -7,63 +7,65 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
   const [loading, setLoading] = useState(false);
   const [reservas, setReservas] = useState({});
   const [expandido, setExpandido] = useState({});
+  const [sede, setSede] = useState("Vitacura");
 
   useEffect(() => {
     cargarReservas();
-  }, []);
+  }, [sede]);
 
   const cargarReservas = async () => {
     setLoading(true);
     setMessage("Cargando reservas...");
     try {
-      const { ok, data } = await ApiService.getReservasPorBloque();
-      
+      const { ok, data } = await ApiService.getReservasPorBloque(sede);
+
       if (ok) {
-        // Robustez: A veces la API devuelve el objeto directo o dentro de una propiedad
-        const datosReservas = data.reservas || data || {};
+        // Issue #19 fix: Validación defensiva de datos del API
+        const datosReservas = (data && typeof data === 'object' && !Array.isArray(data))
+          ? data
+          : {};
         setReservas(datosReservas);
-        
-        // Calcular total para el mensaje
-        const total = Object.values(datosReservas).reduce((acc, list) => acc + (list?.length || 0), 0);
+
+        const total = Object.values(datosReservas).reduce((acc, list) => acc + (Array.isArray(list) ? list.length : 0), 0);
         setMessage(`${total} reservas encontradas en ${Object.keys(datosReservas).length} bloques`);
       } else {
+        setReservas({});
         setMessage("Error al cargar el listado de reservas");
       }
     } catch (error) {
       console.error("Error al cargar reservas:", error);
+      setReservas({});
       setMessage("Error de conexión con el servidor");
     } finally {
       setLoading(false);
     }
   };
 
-  const cancelarReserva = async (email, bloqueHorario, sede, fecha) => {
+  const cancelarReserva = async (email, bloqueHorario, sedeReserva, fecha) => {
     if (!confirm(`¿Estás seguro de cancelar la reserva de ${email}?`)) return;
 
     setMessage("Cancelando reserva...");
     try {
-      // Aseguramos que la fecha exista, si no, usamos hoy
       const fechaCancelacion = fecha || new Date().toISOString().split('T')[0];
 
       const { ok, data } = await ApiService.cancelarReserva(
         email,
         bloqueHorario,
-        sede,
+        sedeReserva,
         fechaCancelacion
       );
 
       if (ok) {
-        setMessage(data?.message || "✅ Reserva cancelada exitosamente");
-        // Recargar datos locales y globales
+        setMessage(data?.message || "Reserva cancelada exitosamente");
         await cargarReservas();
         if (fetchCupos) await fetchCupos();
       } else {
         const errorMsg = data?.error || data?.message || "Error al cancelar reserva";
-        setMessage(`❌ ${errorMsg}`);
+        setMessage(errorMsg);
       }
     } catch (error) {
       console.error("Error:", error);
-      setMessage("❌ Error de conexión");
+      setMessage("Error de conexión");
     }
   };
 
@@ -74,27 +76,51 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
     }));
   };
 
-  // Cálculo seguro del total (evita crash si reservas es null)
-  const totalReservas = Object.values(reservas || {}).reduce((acc, usuarios) => acc + (usuarios?.length || 0), 0);
+  const totalReservas = Object.values(reservas || {}).reduce((acc, usuarios) => acc + (Array.isArray(usuarios) ? usuarios.length : 0), 0);
 
   return (
     <div className="space-y-4">
-      {/* Header con botón de refrescar */}
-      <div className="flex justify-between items-center bg-gray-100 p-4 rounded-lg">
+      {/* Header con selector de sede y botón de refrescar */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gray-100 p-4 rounded-lg">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Reservas de Hoy</h2>
           <p className="text-sm text-gray-600">
             {totalReservas} reserva{totalReservas !== 1 ? 's' : ''} en {Object.keys(reservas || {}).length} bloque{Object.keys(reservas || {}).length !== 1 ? 's' : ''} activos
           </p>
         </div>
-        <button
-          onClick={cargarReservas}
-          disabled={loading}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 transition-colors"
-        >
-          <FiRefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? "Cargando..." : "Refrescar"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Issue #3: Selector de sede */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => setSede("Vitacura")}
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                sede === "Vitacura"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              Vitacura
+            </button>
+            <button
+              onClick={() => setSede("San Joaquín")}
+              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                sede === "San Joaquín"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              San Joaquín
+            </button>
+          </div>
+          <button
+            onClick={cargarReservas}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium disabled:opacity-50 transition-colors"
+          >
+            <FiRefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? "Cargando..." : "Refrescar"}
+          </button>
+        </div>
       </div>
 
       {/* Lista de reservas por bloque */}
@@ -105,27 +131,27 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
         </div>
       ) : Object.keys(reservas || {}).length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-          <p className="text-gray-500 text-lg">No hay reservas registradas para hoy</p>
+          <p className="text-gray-500 text-lg">No hay reservas registradas para hoy en {sede}</p>
         </div>
       ) : (
         <div className="space-y-3">
           {Object.entries(reservas).map(([bloqueKey, usuarios]) => {
+            if (!Array.isArray(usuarios)) return null;
             const estaExpandido = expandido[bloqueKey];
-            // Intentamos obtener la sede del primer usuario, si no hay usuarios, 'N/A'
-            const sede = usuarios?.[0]?.sede || "Sede no especificada";
-            
+            const sedeBloque = usuarios?.[0]?.sede || sede;
+
             return (
               <div key={bloqueKey} className="border-2 border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                {/* Header del bloque (clickeable para expandir/contraer) */}
+                {/* Header del bloque */}
                 <div
                   onClick={() => toggleBloque(bloqueKey)}
                   className="flex justify-between items-center p-4 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors select-none"
                 >
                   <div>
                     <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
-                      Bloque {bloqueKey} 
+                      Bloque {bloqueKey}
                       <span className="text-sm font-normal text-gray-500 bg-white px-2 py-0.5 rounded border">
-                        {sede}
+                        {sedeBloque}
                       </span>
                     </h3>
                     <p className="text-sm text-gray-600">
@@ -139,7 +165,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
                   </div>
                 </div>
 
-                {/* Lista de usuarios (expandible) */}
+                {/* Lista de usuarios */}
                 {estaExpandido && (
                   <div className="p-4 space-y-2 bg-white border-t border-gray-200">
                     {usuarios.map((user, idx) => (
@@ -156,16 +182,16 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
                             </p>
                             <p className="text-xs">
                               {user.asistio === 1 ? (
-                                <span className="text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded border border-green-200">✅ Asistió</span>
+                                <span className="text-green-600 font-medium bg-green-50 px-2 py-0.5 rounded border border-green-200">Asistió</span>
                               ) : user.asistio === 0 ? (
-                                <span className="text-red-600 font-medium bg-red-50 px-2 py-0.5 rounded border border-red-200">❌ No asistió</span>
+                                <span className="text-red-600 font-medium bg-red-50 px-2 py-0.5 rounded border border-red-200">No asistió</span>
                               ) : (
-                                <span className="text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">⏳ Pendiente</span>
+                                <span className="text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">Pendiente</span>
                               )}
                             </p>
                           </div>
                         </div>
-                        
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

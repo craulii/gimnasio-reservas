@@ -1,20 +1,11 @@
-import mysql from "mysql2/promise";
+import pool from "@/lib/db";
 
 export async function GET() {
   try {
-    const db = await mysql.createConnection({
-      host: "127.0.0.1",
-      port: process.env.DB_PORT || 3306,
-      user: "root",
-      password: "root",
-      database: "gimnasio",
-    });
-
-    const [rows] = await db.query("SELECT * FROM users");
-    await db.end();
-    return Response.json(rows);
+    const [rows] = await pool.query("SELECT 1 as ok");
+    return Response.json({ status: "ok", result: rows[0] });
   } catch (error) {
-    console.error("Error al consultar la base de datos:", error);
+    console.error("Error en test de conexión:", error);
     return new Response(`Error: ${error.message}`, { status: 500 });
   }
 }

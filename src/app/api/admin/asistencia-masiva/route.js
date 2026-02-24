@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-// ✅ CORRECCIÓN: Usamos el alias @ para la base de datos
 import pool from "@/lib/db";
 
 // Llamar al procesador de ausencias automáticas
-// Nota: Asegúrate de tener NEXT_PUBLIC_API_URL en tu archivo .env del VPS
 async function procesarAusenciasAutomaticas(bloque, sede, fecha) {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -12,7 +10,7 @@ async function procesarAusenciasAutomaticas(bloque, sede, fecha) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ bloque, sede, fecha })
     });
-    
+
     if (!response.ok) throw new Error("Error en respuesta de procesar-ausencias");
 
     const data = await response.json();
@@ -20,26 +18,21 @@ async function procesarAusenciasAutomaticas(bloque, sede, fecha) {
     return data;
   } catch (error) {
     console.error('[ASISTENCIA-MASIVA] Warning llamando procesar-ausencias:', error.message);
-    // No retornamos null para no romper el flujo, solo logueamos
     return null;
   }
 }
 
 export async function POST(request) {
-  // 1. Verificación de Middleware
-  const userHeader = request.headers.get("x-user");
-  if (!userHeader) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-  
-  const user = JSON.parse(userHeader);
-  // Verificamos ambas propiedades por seguridad (dependiendo de cómo lo guardó el login)
-  if (user.rol !== "admin" && user.role_type !== "admin" && user.is_admin !== 1) {
-    return NextResponse.json({ error: "Solo admin puede tomar asistencia" }, { status: 403 });
+  // Issue #4 fix: Usar headers correctos en vez de JSON.parse
+  const userEmail = request.headers.get("x-user");
+  const userRole = request.headers.get("x-user-type");
+
+  if (!userEmail || userRole !== 'admin') {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   const { asistencias, bloque_horario, sede, fecha } = await request.json();
-  
+
   if (!asistencias || !Array.isArray(asistencias)) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
@@ -49,7 +42,7 @@ export async function POST(request) {
 
     for (const asistencia of asistencias) {
       const { email, asistio } = asistencia;
-      
+
       // Obtener el estado ANTERIOR de la asistencia
       const [reservaAnterior] = await pool.query(
         "SELECT asistio FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = ?",
@@ -62,7 +55,7 @@ export async function POST(request) {
       }
 
       const asistioAnterior = reservaAnterior[0].asistio;
-      
+
       // Actualizar asistencia en reserva
       await pool.query(
         "UPDATE reservas SET asistio = ? WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = ?",
@@ -70,7 +63,7 @@ export async function POST(request) {
       );
 
       // *** LÓGICA DE FALTAS ***
-      
+
       // Caso 1: Era NULL o 1 (presente/pendiente) y ahora es 0 (ausente) -> SUMAR FALTA
       if ((asistioAnterior === null || asistioAnterior === 1) && !asistio) {
         await pool.query(
@@ -78,7 +71,7 @@ export async function POST(request) {
           [email]
         );
         console.log(`[FALTA AGREGADA] ${email}`);
-        
+
         // Verificar Baneo (3 faltas)
         const [userRow] = await pool.query("SELECT faltas FROM users WHERE email = ?", [email]);
         if (userRow.length > 0 && userRow[0].faltas >= 3) {
@@ -86,7 +79,7 @@ export async function POST(request) {
           console.log(`[BANEADO] ${email}`);
         }
       }
-      
+
       // Caso 2: Era 0 (ausente) y ahora es 1 (presente) -> RESTAR FALTA (Corregir error)
       else if (asistioAnterior === 0 && asistio) {
         await pool.query(
@@ -94,7 +87,7 @@ export async function POST(request) {
           [email]
         );
         console.log(`[FALTA CORREGIDA] ${email}`);
-        
+
         // Desbanear si baja de 3 faltas
         const [userRow] = await pool.query("SELECT faltas FROM users WHERE email = ?", [email]);
         if (userRow.length > 0 && userRow[0].faltas < 3) {
@@ -106,9 +99,9 @@ export async function POST(request) {
 
     await pool.query("COMMIT");
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "Asistencia registrada exitosamente",
-      procesados: asistencias.length 
+      procesados: asistencias.length
     });
 
   } catch (error) {
@@ -120,15 +113,12 @@ export async function POST(request) {
 
 // GET para obtener lista de usuarios de un bloque específico
 export async function GET(request) {
-  // 1. Verificación de Middleware
-  const userHeader = request.headers.get("x-user");
-  if (!userHeader) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-  
-  const user = JSON.parse(userHeader);
-  if (user.rol !== "admin" && user.role_type !== "admin" && user.is_admin !== 1) {
-    return NextResponse.json({ error: "Solo admin" }, { status: 403 });
+  // Issue #4 fix: Usar headers correctos en vez de JSON.parse
+  const userEmail = request.headers.get("x-user");
+  const userRole = request.headers.get("x-user-type");
+
+  if (!userEmail || userRole !== 'admin') {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -139,9 +129,8 @@ export async function GET(request) {
   if (!bloque || !sede) {
     return NextResponse.json({ error: "Faltan parámetros bloque o sede" }, { status: 400 });
   }
-  
+
   // Procesamos ausencias automáticas antes de devolver la lista
-  // (Para marcar como ausentes a los que no vinieron en bloques anteriores)
   await procesarAusenciasAutomaticas(bloque, sede, fecha);
 
   try {

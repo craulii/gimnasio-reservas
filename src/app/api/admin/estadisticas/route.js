@@ -1,23 +1,11 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
-
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'reservas_crauli',
-  password: 'CrauliChris69!',
-  database: 'reservas_gymusm',
-  port: 3306
-};
+import pool from "@/lib/db";
 
 export async function GET(request) {
-  let connection;
   try {
-    // 1. SEGURIDAD: Leer headers del Middleware
-    // El middleware envía 'admin' o 'alumno' como texto plano en x-user-type
     const userRole = request.headers.get("x-user-type");
     const userEmail = request.headers.get("x-user");
 
-    // Validación estricta
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "Acceso denegado. Solo administradores." }, { status: 403 });
     }
@@ -29,20 +17,16 @@ export async function GET(request) {
     console.log("=== CARGANDO ESTADÍSTICAS AVANZADAS ===");
     console.log("Rango:", fechaInicio, "a", fechaFin);
 
-    connection = await mysql.createConnection(dbConfig);
-
-    // ========================================
     // QUERY 1: ESTADÍSTICAS POR BLOQUE
-    // ========================================
     let queryBloques = `
-      SELECT 
+      SELECT
         bloque_horario,
         COUNT(*) as total_reservas,
         COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
-        CASE WHEN COUNT(*) > 0 THEN 
+        CASE WHEN COUNT(*) > 0 THEN
             ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 2)
         ELSE 0 END as porcentaje_asistencia
-      FROM reservas 
+      FROM reservas
       WHERE 1=1
     `;
 
@@ -56,26 +40,22 @@ export async function GET(request) {
 
     queryBloques += " GROUP BY bloque_horario ORDER BY bloque_horario";
 
-    const [estadisticasBloques] = await connection.execute(queryBloques, params);
+    const [estadisticasBloques] = await pool.execute(queryBloques, params);
 
-    // ========================================
     // QUERY 2: ESTADÍSTICAS POR SEDE
-    // ========================================
     let querySedes = `
-      SELECT 
+      SELECT
         sede,
         COUNT(*) as total_reservas,
         COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN
             ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 2)
         ELSE 0 END as porcentaje_asistencia
-      FROM reservas 
+      FROM reservas
       WHERE 1=1
     `;
 
-    const paramsSedes = [...params]; // Usamos los mismos parámetros de fecha
-    // Nota: Reconstruimos la cláusula WHERE para sedes si es necesario, 
-    // pero como params es igual, solo concatenamos el SQL.
+    const paramsSedes = [...params];
     if (fechaInicio && fechaFin) {
         querySedes += " AND fecha BETWEEN ? AND ?";
     } else {
@@ -84,13 +64,11 @@ export async function GET(request) {
 
     querySedes += " GROUP BY sede ORDER BY sede";
 
-    const [estadisticasSedes] = await connection.execute(querySedes, paramsSedes);
+    const [estadisticasSedes] = await pool.execute(querySedes, paramsSedes);
 
-    // ========================================
     // QUERY 3: RESUMEN GENERAL
-    // ========================================
     let queryResumen = `
-      SELECT 
+      SELECT
         COUNT(DISTINCT email) as usuarios_unicos,
         COUNT(*) as total_reservas,
         COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
@@ -107,11 +85,8 @@ export async function GET(request) {
         queryResumen += " AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
     }
 
-    const [resumen] = await connection.execute(queryResumen, params); // params es idéntico
+    const [resumen] = await pool.execute(queryResumen, params);
 
-    // ========================================
-    // CONSTRUIR RESPUESTA
-    // ========================================
     const resultado = {
       resumen: resumen[0] || {
         usuarios_unicos: 0,
@@ -127,11 +102,9 @@ export async function GET(request) {
 
   } catch (error) {
     console.error("Error completo en estadísticas:", error);
-    return NextResponse.json({ 
-        error: "Error interno", 
-        message: error.message 
+    return NextResponse.json({
+        error: "Error interno",
+        message: error.message
     }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }

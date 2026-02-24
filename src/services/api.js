@@ -111,8 +111,12 @@ class ApiService {
 
   // --- ADMIN: RESERVAS Y GESTIÓN ---
 
-  static async getReservasPorBloque() {
-    return await fetchWithAuth('/api/admin/reservas-por-bloque', { method: "GET" });
+  static async getReservasPorBloque(sede = null) {
+    let endpoint = '/api/admin/reservas-por-bloque';
+    if (sede) {
+      endpoint += `?sede=${encodeURIComponent(sede)}`;
+    }
+    return await fetchWithAuth(endpoint, { method: "GET" });
   }
 
   static async cancelarReserva(email, bloque_horario, sede, fecha) {

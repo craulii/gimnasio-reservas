@@ -1,17 +1,8 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
-
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'reservas_crauli',
-  password: 'CrauliChris69!',
-  database: 'reservas_gymusm',
-  port: 3306
-};
+import pool from "@/lib/db";
 
 // --- GET: EXPORTAR A CSV ---
 export async function GET(request) {
-  let connection;
   try {
     // 1. SEGURIDAD
     const userRole = request.headers.get('x-user-type');
@@ -23,33 +14,31 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const mes = searchParams.get('mes');
-    const tipo = searchParams.get('tipo') || 'completo'; 
+    const tipo = searchParams.get('tipo') || 'completo';
 
     console.log(`[EXPORTAR] Tipo: ${tipo}, Mes: ${mes || 'último mes'}`);
 
-    // 2. Lógica de Fechas
+    // 2. Lógica de Fechas (Issue #18 fix: parse year/month as numbers)
     let fechaInicio, fechaFin;
     if (mes) {
       fechaInicio = `${mes}-01`;
-      const [year, month] = mes.split('-');
+      const [year, month] = mes.split('-').map(Number);
       const ultimoDia = new Date(year, month, 0).getDate();
       fechaFin = `${mes}-${ultimoDia.toString().padStart(2, '0')}`;
     } else {
-      // Últimos 3 meses por defecto
       const hoy = new Date();
       fechaFin = hoy.toISOString().split('T')[0];
       const hace3Meses = new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate());
       fechaInicio = hace3Meses.toISOString().split('T')[0];
     }
 
-    connection = await mysql.createConnection(dbConfig);
     let csvContent = '';
     let fileName = `gimnasio_${tipo}_${mes || 'reciente'}.csv`;
 
     // 3. Selección de Query según tipo
     if (tipo === 'completo') {
-      const [result] = await connection.execute(`
-        SELECT 
+      const [result] = await pool.execute(`
+        SELECT
           c.fecha,
           c.sede,
           c.bloque,
@@ -59,7 +48,7 @@ export async function GET(request) {
           COUNT(r.id) as reservas_realizadas,
           SUM(CASE WHEN r.asistio = 1 THEN 1 ELSE 0 END) as asistencias,
           SUM(CASE WHEN r.asistio = 0 THEN 1 ELSE 0 END) as inasistencias,
-          CASE WHEN COUNT(r.id) > 0 THEN 
+          CASE WHEN COUNT(r.id) > 0 THEN
             ROUND((SUM(CASE WHEN r.asistio = 1 THEN 1 ELSE 0 END) / COUNT(r.id)) * 100, 2)
           ELSE 0 END as porcentaje_asistencia,
           GROUP_CONCAT(DISTINCT u.name ORDER BY u.name SEPARATOR '; ') as usuarios_reservaron
@@ -73,22 +62,21 @@ export async function GET(request) {
 
       csvContent = 'Fecha,Sede,Bloque,Cupos Totales,Cupos Reservados,Cupos Disponibles,Reservas Realizadas,Asistencias,Inasistencias,Porcentaje Asistencia,Usuarios\n';
       result.forEach(row => {
-        // Asegurar que fecha sea string
         const fechaStr = row.fecha instanceof Date ? row.fecha.toISOString().split('T')[0] : row.fecha;
         csvContent += `${fechaStr},${row.sede},${row.bloque},${row.cupos_totales},${row.cupos_reservados},${row.cupos_disponibles},${row.reservas_realizadas},${row.asistencias},${row.inasistencias},${row.porcentaje_asistencia},"${row.usuarios_reservaron || 'Sin reservas'}"\n`;
       });
 
     } else if (tipo === 'cupos') {
-      const [result] = await connection.execute(`
-        SELECT 
-          fecha, 
+      const [result] = await pool.execute(`
+        SELECT
+          fecha,
           sede,
-          bloque, 
-          total, 
-          reservados, 
+          bloque,
+          total,
+          reservados,
           (total - reservados) as disponibles,
           CASE WHEN total > 0 THEN ROUND((reservados / total) * 100, 2) ELSE 0 END as porcentaje_ocupacion
-        FROM cupos 
+        FROM cupos
         WHERE fecha BETWEEN ? AND ?
         ORDER BY fecha DESC, sede, bloque
       `, [fechaInicio, fechaFin]);
@@ -100,8 +88,8 @@ export async function GET(request) {
       });
 
     } else if (tipo === 'reservas') {
-      const [result] = await connection.execute(`
-        SELECT 
+      const [result] = await pool.execute(`
+        SELECT
           r.fecha,
           r.sede,
           r.bloque_horario,
@@ -127,7 +115,7 @@ export async function GET(request) {
 
     // Agregar BOM UTF-8 para Excel
     const csvWithBOM = '\uFEFF' + csvContent;
-    
+
     return new NextResponse(csvWithBOM, {
       status: 200,
       headers: {
@@ -139,28 +127,23 @@ export async function GET(request) {
 
   } catch (error) {
     console.error('[EXPORTAR] Error:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Error exportando datos',
-      message: error.message 
+      message: error.message
     }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }
 
 // --- POST: OBTENER MESES DISPONIBLES ---
 export async function POST(request) {
-  let connection;
   try {
     const userRole = request.headers.get('x-user-type');
     if (userRole !== 'admin') {
         return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    connection = await mysql.createConnection(dbConfig);
-
-    const [meses] = await connection.execute(`
-      SELECT 
+    const [meses] = await pool.execute(`
+      SELECT
         DATE_FORMAT(fecha, '%Y-%m') as mes,
         COUNT(DISTINCT fecha) as dias_con_datos,
         MIN(fecha) as fecha_inicio,
@@ -173,13 +156,11 @@ export async function POST(request) {
       LIMIT 12
     `);
 
-    // Formatear meses para el frontend
     const mesesFormateados = meses.map(m => {
-      const [year, month] = m.mes.split('-');
-      // Creamos fecha usando UTC para evitar desfases de zona horaria al solo querer el nombre
-      const dateObj = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const [year, month] = m.mes.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, 1);
       const nombreMes = dateObj.toLocaleDateString('es-CL', { month: 'long', year: 'numeric' });
-      
+
       return {
         ...m,
         nombre: nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1)
@@ -193,11 +174,9 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('[EXPORTAR] Error obteniendo meses:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Error interno',
-      message: error.message 
+      message: error.message
     }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }

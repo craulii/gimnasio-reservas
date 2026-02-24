@@ -81,7 +81,7 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
         }
         await obtenerMisReservas();
       } else {
-        setMessage(data || "Error al cancelar la reserva");
+        setMessage(data?.error || data?.message || "Error al cancelar la reserva");
       }
     } catch (error) {
       console.error("Error cancelando reserva:", error);

@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
-
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'reservas_crauli',
-  password: 'CrauliChris69!',
-  database: 'reservas_gymusm',
-  port: 3306
-};
+import pool from "@/lib/db";
 
 export async function DELETE(request) {
   let connection;
   try {
-    // 1. SEGURIDAD: Verificar headers del Middleware
-    // El middleware ya valida la sesión, aquí verificamos el ROL.
-    const userRole = request.headers.get("x-user-type"); // Viene como string 'admin' o 'alumno'
+    // 1. SEGURIDAD
+    const userRole = request.headers.get("x-user-type");
     const userEmail = request.headers.get("x-user");
 
     if (!userEmail || userRole !== 'admin') {
@@ -29,18 +20,15 @@ export async function DELETE(request) {
 
     console.log(`[ADMIN DELETE] Eliminando: ${email} - ${bloque_horario} - ${sede} - ${fecha}`);
 
-    // Formatear fecha (YYYY-MM-DD)
     let fechaFormateada = fecha;
     if (fecha.includes("T")) {
       fechaFormateada = fecha.split("T")[0];
     }
 
     // 2. CONEXIÓN Y TRANSACCIÓN
-    connection = await mysql.createConnection(dbConfig);
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    // A. Eliminar la reserva
-    // Usamos DATE() para ignorar horas si las hubiera
     const [result] = await connection.execute(
       "DELETE FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND DATE(fecha) = DATE(?)",
       [email, bloque_horario, sede, fechaFormateada]
@@ -48,9 +36,7 @@ export async function DELETE(request) {
 
     console.log("Reservas eliminadas:", result.affectedRows);
 
-    // B. Si se borró algo, liberar el cupo
     if (result.affectedRows > 0) {
-      // Actualizamos la tabla de cupos para esa fecha específica
       await connection.execute(
         "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = ?",
         [bloque_horario, sede, fechaFormateada]
@@ -58,12 +44,11 @@ export async function DELETE(request) {
       console.log("Cupo liberado correctamente.");
     }
 
-    // C. Confirmar cambios
     await connection.commit();
 
     return NextResponse.json({
-      message: result.affectedRows > 0 
-        ? "Reserva cancelada exitosamente" 
+      message: result.affectedRows > 0
+        ? "Reserva cancelada exitosamente"
         : "No se encontró la reserva para cancelar",
       cancelada: result.affectedRows > 0
     });
@@ -76,6 +61,6 @@ export async function DELETE(request) {
       { status: 500 }
     );
   } finally {
-    if (connection) await connection.end();
+    if (connection) connection.release();
   }
 }

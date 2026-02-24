@@ -1,18 +1,8 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
-
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'reservas_crauli',
-  password: 'CrauliChris69!',
-  database: 'reservas_gymusm',
-  port: 3306
-};
+import pool from "@/lib/db";
 
 export async function GET(request) {
-  let connection;
   try {
-    // 1. SEGURIDAD
     const userRole = request.headers.get("x-user-type");
     const userEmail = request.headers.get("x-user");
 
@@ -20,7 +10,6 @@ export async function GET(request) {
       return NextResponse.json({ error: "Acceso denegado" }, { status: 403 });
     }
 
-    // 2. PARÁMETROS
     const { searchParams } = new URL(request.url);
     const bloque = searchParams.get("bloque");
     const fechaInicio = searchParams.get("fechaInicio");
@@ -30,10 +19,7 @@ export async function GET(request) {
       return NextResponse.json({ error: "Bloque requerido" }, { status: 400 });
     }
 
-    connection = await mysql.createConnection(dbConfig);
-
-    // 3. CONSTRUCCIÓN DE FILTROS
-    // Base de parámetros: siempre el primero es el bloque
+    // CONSTRUCCIÓN DE FILTROS
     let dateCondition = "";
     let dateParams = [bloque];
 
@@ -44,9 +30,9 @@ export async function GET(request) {
       dateCondition = "AND fecha >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)";
     }
 
-    // --- QUERY 1: GENERALES ---
-    const [estadisticasGenerales] = await connection.execute(
-      `SELECT 
+    // QUERY 1: GENERALES
+    const [estadisticasGenerales] = await pool.execute(
+      `SELECT
         COUNT(*) as total_reservas,
         COALESCE(SUM(asistio), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
@@ -55,20 +41,20 @@ export async function GET(request) {
         CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*) / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_reservas_por_dia,
         MIN(fecha) as primera_fecha,
         MAX(fecha) as ultima_fecha
-      FROM reservas 
+      FROM reservas
       WHERE bloque_horario = ? ${dateCondition}`,
       dateParams
     );
 
-    // --- QUERY 2: POR DÍA ---
-    const [datosPorDia] = await connection.execute(
-      `SELECT 
+    // QUERY 2: POR DÍA
+    const [datosPorDia] = await pool.execute(
+      `SELECT
         fecha,
         COUNT(*) as reservas,
         COALESCE(SUM(asistio), 0) as asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
         DAYNAME(fecha) as dia_semana
-      FROM reservas 
+      FROM reservas
       WHERE bloque_horario = ? ${dateCondition}
       GROUP BY fecha
       ORDER BY fecha DESC
@@ -76,9 +62,9 @@ export async function GET(request) {
       dateParams
     );
 
-    // --- QUERY 3: ALUMNOS FRECUENTES ---
-    const [alumnosFrecuentes] = await connection.execute(
-      `SELECT 
+    // QUERY 3: ALUMNOS FRECUENTES
+    const [alumnosFrecuentes] = await pool.execute(
+      `SELECT
         u.name,
         r.email,
         COUNT(*) as veces_reservado,
@@ -93,29 +79,29 @@ export async function GET(request) {
       dateParams
     );
 
-    // --- QUERY 4: DÍA DE LA SEMANA ---
-    const [estadisticasDiaSemana] = await connection.execute(
-      `SELECT 
+    // QUERY 4: DÍA DE LA SEMANA
+    const [estadisticasDiaSemana] = await pool.execute(
+      `SELECT
         DAYNAME(fecha) as dia_semana,
         COUNT(*) as total_reservas,
         COALESCE(SUM(asistio), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
         CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*) / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_por_dia
-      FROM reservas 
+      FROM reservas
       WHERE bloque_horario = ? ${dateCondition}
       GROUP BY DAYOFWEEK(fecha), DAYNAME(fecha)
       ORDER BY DAYOFWEEK(fecha)`,
       dateParams
     );
 
-    // --- QUERY 5: TENDENCIA RECIENTE (Últimos 7 días fijo) ---
-    const [tendenciaReciente] = await connection.execute(
-      `SELECT 
+    // QUERY 5: TENDENCIA RECIENTE
+    const [tendenciaReciente] = await pool.execute(
+      `SELECT
         fecha,
         COUNT(*) as reservas,
         COALESCE(SUM(asistio), 0) as asistencias,
         CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia
-      FROM reservas 
+      FROM reservas
       WHERE bloque_horario = ? AND fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
       GROUP BY fecha
       ORDER BY fecha`,
@@ -136,7 +122,5 @@ export async function GET(request) {
   } catch (error) {
     console.error("Error en estadísticas bloque:", error);
     return NextResponse.json({ error: "Error interno: " + error.message }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }

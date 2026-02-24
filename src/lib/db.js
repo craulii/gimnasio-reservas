@@ -1,11 +1,11 @@
-import mysql from 'mysql2/promise'; // O require('mysql2')
+import mysql from 'mysql2/promise';
 
 const pool = mysql.createPool({
-  host: '127.0.0.1',        // <--- PUESTO A MANO
-  port: 3306,               // <--- PUESTO A MANO (Número, sin comillas)
-  user: 'reservas_crauli',  // <--- PUESTO A MANO
-  password: 'CrauliChris69!', // <--- PUESTO A MANO
-  database: 'reservas_gymusm', // <--- PUESTO A MANO
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: parseInt(process.env.DB_PORT || '3306'),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0

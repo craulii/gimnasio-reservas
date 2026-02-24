@@ -94,7 +94,7 @@ export default function Home() {
   }
 
   // 3. RUTA ADMIN
-  if (user.role_type === 'admin' || user.rol === 'admin' || user.is_admin === 1) {
+  if (user.role_type === 'admin') {
     return (
       <DashboardAdmin 
         user={user} 

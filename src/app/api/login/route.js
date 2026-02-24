@@ -1,20 +1,19 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
 import bcrypt from "bcryptjs";
-
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'reservas_crauli',
-  password: 'CrauliChris69!',
-  database: 'reservas_gymusm',
-  port: 3306
-};
+import pool from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
 
 export async function POST(request) {
-  let connection;
   try {
+    // Rate limiting by IP
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const { allowed } = checkRateLimit(`login:${ip}`);
+    if (!allowed) {
+      return NextResponse.json({ error: "Demasiados intentos. Intenta de nuevo en 15 minutos." }, { status: 429 });
+    }
+
     const body = await request.json();
     const { username: rawEmail, password } = body;
 
@@ -28,9 +27,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Email no válido (debe ser @usm.cl)" }, { status: 401 });
     }
 
-    connection = await mysql.createConnection(dbConfig);
-
-    const [rows] = await connection.execute(
+    const [rows] = await pool.execute(
       "SELECT * FROM users WHERE email = ? LIMIT 1",
       [email]
     );
@@ -54,28 +51,25 @@ export async function POST(request) {
     const isAdmin = Number(user.is_admin) === 1;
     const roleType = isAdmin ? 'admin' : 'alumno';
 
-    // 1. Preparamos el objeto de datos (consistente con lo que espera tu middleware)
     const userData = {
       id: user.id,
       name: user.name,
       email: user.email,
-      rol_usm: user.rol, // Asegúrate que tu middleware use 'rol_usm' o cámbialo a 'rol'
+      rol_usm: user.rol,
       role_type: roleType
     };
 
     const response = NextResponse.json({
       message: "Login exitoso",
-      user: userData // Enviamos los datos para el estado del frontend
+      user: userData
     });
 
-    // 2. 🔥 CORRECCIÓN CRÍTICA: Guardar Cookie con path '/' y el nombre correcto
-    // Usamos JSON.stringify(userData) porque tu middleware hace JSON.parse
     response.cookies.set("user_session", JSON.stringify(userData), {
-      httpOnly: true, // Seguridad: No accesible por JS del cliente
-      secure: process.env.NODE_ENV === "production", 
-      sameSite: "lax", // 'lax' es más compatible para redirecciones iniciales
-      path: "/", // CRÍTICO: Para que sea visible en todas las rutas
-      maxAge: 60 * 60 * 24 // 1 día (puedes subirlo a 7 días si prefieres)
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24
     });
 
     return response;
@@ -83,7 +77,5 @@ export async function POST(request) {
   } catch (error) {
     console.error("Login Error:", error);
     return NextResponse.json({ error: "Error del servidor" }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }

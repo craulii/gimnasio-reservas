@@ -23,19 +23,12 @@ export default function LoginForm({ setUser, setMessage }) {
 
       console.log("Respuesta Login:", data);
 
-      if (ok) {
-        // Guardamos estado local (opcional, ya que la cookie manda)
-        setUser({
-          username: data.email,
-          is_admin: data.is_admin,
-          id: data.id,
-          name: data.name,
-          rol: data.rol,
-          role_type: data.role_type
-        });
+      if (ok && data.user) {
+        // Guardamos estado local (la cookie también manda)
+        setUser(data.user);
 
-        const tipoUsuario = data.role_type === 'admin' ? "Administrador" : "Alumno";
-        setMessage(`✅ Bienvenido ${data.name} (${tipoUsuario})`);
+        const tipoUsuario = data.user.role_type === 'admin' ? "Administrador" : "Alumno";
+        setMessage(`Bienvenido ${data.user.name} (${tipoUsuario})`);
 
         // 🚀 REDIRECCIÓN FUERTE
         // Necesaria para que el navegador envíe la cookie nueva al pedir el Dashboard
@@ -71,7 +64,7 @@ export default function LoginForm({ setUser, setMessage }) {
             className="block w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-300 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin()} // Permitir Enter
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()} // Permitir Enter
           />
         </div>
       </div>
@@ -89,7 +82,7 @@ export default function LoginForm({ setUser, setMessage }) {
             className="block w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-300 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin()} // Permitir Enter
+            onKeyDown={(e) => e.key === 'Enter' && handleLogin()} // Permitir Enter
           />
         </div>
       </div>

@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import mysql from "mysql2/promise";
+import bcrypt from "bcryptjs";
 import { normalizarRut, validarRut } from "@/lib/rut";
-const dbConfig = {
-  host: '127.0.0.1',
-  user: 'reservas_crauli',
-  password: 'CrauliChris69!',
-  database: 'reservas_gymusm',
-  port: 3306
-};
+import pool from "@/lib/db";
+
+const USM_EMAIL_REGEX = /^[^\s@]+@usm\.cl$/i;
 
 // --- GET: OBTENER USUARIOS ---
 export async function GET(request) {
-  let connection;
   try {
     // 1. SEGURIDAD
     const userRole = request.headers.get("x-user-type");
@@ -24,8 +19,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const search = (searchParams.get("search") || "").trim();
     const tipo = searchParams.get("tipo") || "todos";
-
-    connection = await mysql.createConnection(dbConfig);
 
     let query = `
       SELECT rol, rut, name, email, is_admin, faltas, baneado,
@@ -50,21 +43,18 @@ export async function GET(request) {
 
     query += " ORDER BY name ASC LIMIT 500";
 
-    const [users] = await connection.execute(query, params);
+    const [users] = await pool.execute(query, params);
 
     return NextResponse.json(users);
 
   } catch (error) {
     console.error("Error obteniendo usuarios:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }
 
 // --- PUT: ACTUALIZAR USUARIO ---
 export async function PUT(request) {
-  let connection;
   try {
     // 1. SEGURIDAD
     const userRole = request.headers.get("x-user-type");
@@ -78,21 +68,23 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Email y nombre son obligatorios" }, { status: 400 });
     }
 
-    connection = await mysql.createConnection(dbConfig);
-
     console.log(`[ADMIN] Actualizando usuario: ${email}`);
 
     // Verificar que el usuario existe
-    const [existingUser] = await connection.execute("SELECT email FROM users WHERE email = ?", [email]);
+    const [existingUser] = await pool.execute("SELECT email FROM users WHERE email = ?", [email]);
     if (existingUser.length === 0) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    // Si va a cambiar el email, verificar duplicados
+    // Issue #10 fix: Validar email @usm.cl al editar
     if (newEmail && newEmail !== email) {
-      const [duplicateCheck] = await connection.execute(
+      const normalizedNewEmail = newEmail.toLowerCase().trim();
+      if (!USM_EMAIL_REGEX.test(normalizedNewEmail)) {
+        return NextResponse.json({ error: "Email debe ser @usm.cl" }, { status: 400 });
+      }
+      const [duplicateCheck] = await pool.execute(
         "SELECT email FROM users WHERE email = ?",
-        [newEmail.toLowerCase().trim()]
+        [normalizedNewEmail]
       );
       if (duplicateCheck.length > 0) {
         return NextResponse.json({ error: "El nuevo email ya está en uso" }, { status: 409 });
@@ -109,8 +101,7 @@ export async function PUT(request) {
       if (!validarRut(rutNorm)) {
         return NextResponse.json({ error: "RUT inválido" }, { status: 400 });
       }
-      // Verificar duplicado
-      const [dupRut] = await connection.execute(
+      const [dupRut] = await pool.execute(
         "SELECT email FROM users WHERE rut = ? AND email <> ?",
         [rutNorm, email]
       );
@@ -123,9 +114,6 @@ export async function PUT(request) {
 
     // Actualizar Rol Institucional
     if (typeof rol === "string" && rol.trim() !== "") {
-      // Regex opcional, si quieres validarlo estricto descomenta:
-      // const ROL_REGEX = /^\d{9}-\d{1}$/;
-      // if (!ROL_REGEX.test(rol.trim())) return NextResponse.json({ error: "Rol inválido" }, { status: 400 });
       updateParts.push("rol = ?");
       updateParams.push(rol.trim());
     }
@@ -138,23 +126,22 @@ export async function PUT(request) {
       updateParams.push(changedEmail);
     }
 
-    // Actualizar Password (Directo)
+    // Issue #2 fix: Hash password antes de guardar
     if (password && password.trim() !== "") {
-      // Nota: Si usas bcrypt, aquí deberías hashearlo. 
-      // Si tu sistema guarda texto plano (no recomendado pero funcional), déjalo así.
+      const hashedPassword = await bcrypt.hash(password, 12);
       updateParts.push("password = ?");
-      updateParams.push(password);
+      updateParams.push(hashedPassword);
     }
 
     // Ejecutar Update
     const updateQuery = `UPDATE users SET ${updateParts.join(", ")} WHERE email = ?`;
     updateParams.push(email);
 
-    await connection.execute(updateQuery, updateParams);
+    await pool.execute(updateQuery, updateParams);
 
     // Si cambió el email, actualizar referencias en reservas
     if (changedEmail) {
-      await connection.execute("UPDATE reservas SET email = ? WHERE email = ?", [changedEmail, email]);
+      await pool.execute("UPDATE reservas SET email = ? WHERE email = ?", [changedEmail, email]);
     }
 
     return NextResponse.json({
@@ -165,8 +152,6 @@ export async function PUT(request) {
   } catch (error) {
     console.error("Error actualizando usuario:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
-  } finally {
-    if (connection) await connection.end();
   }
 }
 
@@ -176,21 +161,19 @@ export async function DELETE(request) {
   try {
     // 1. SEGURIDAD
     const userRole = request.headers.get("x-user-type");
-    const adminEmail = request.headers.get("x-user"); // Quien ejecuta la acción
+    const adminEmail = request.headers.get("x-user");
 
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
 
-    const { email } = await request.json(); // Email a eliminar
+    const { email } = await request.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email es obligatorio" }, { status: 400 });
     }
 
-    connection = await mysql.createConnection(dbConfig);
-
-    const [existingUser] = await connection.execute(
+    const [existingUser] = await pool.execute(
       "SELECT email FROM users WHERE email = ?",
       [email]
     );
@@ -203,6 +186,7 @@ export async function DELETE(request) {
     }
 
     // Transacción para borrar todo limpio
+    connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
@@ -227,6 +211,6 @@ export async function DELETE(request) {
     console.error("Error eliminando usuario:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   } finally {
-    if (connection) await connection.end();
+    if (connection) connection.release();
   }
 }
