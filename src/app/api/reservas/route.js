@@ -84,7 +84,7 @@ export async function POST(request) {
 
     console.log(`[RESERVA] Intento: ${user.email} -> ${bloque_horario} en ${sede}`);
 
-    // Issue #5 fix: Mover TODA la lógica de verificación DENTRO de la transacción con FOR UPDATE
+    // Issue #5 fix: Mover verificación DENTRO de la transacción con lock pesimista
     await connection.beginTransaction();
 
     try {

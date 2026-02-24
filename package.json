@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "node server.js",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node tests/run-all.js",
+    "test:security": "node tests/security.test.js",
+    "test:bugs": "node tests/bugfixes.test.js",
+    "test:arch": "node tests/architecture.test.js",
+    "test:watch": "node tests/watch.js",
+    "precommit": "node tests/run-all.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
