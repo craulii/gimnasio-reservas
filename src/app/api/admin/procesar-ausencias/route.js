@@ -56,7 +56,7 @@ export async function POST(request) {
        WHERE r.fecha = ?
        AND r.bloque_horario = ?
        AND r.sede = ?
-       AND r.asistio = 0`,
+       AND r.asistio IS NULL`,
       [fecha, bloque, sede]
     );
 

@@ -120,7 +120,7 @@ export async function POST(request) {
 
       // H. INSERT + UPDATE atómicos
       await connection.execute(
-          "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, ?, ?, ?, 0)",
+          "INSERT INTO reservas (email, fecha, bloque_horario, sede, asistio) VALUES (?, ?, ?, ?, NULL)",
           [user.email, hoyChile, bloque_horario, sede]
       );
 
