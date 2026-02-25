@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getFechaChile } from "@/app/utils/constants";
 
 export async function POST(request) {
   try {
@@ -20,8 +21,8 @@ export async function POST(request) {
 
     // 3. ACTUALIZAR
     const [result] = await pool.execute(
-      "UPDATE reservas SET asistio = ? WHERE email = ? AND bloque_horario = ? AND fecha = CURRENT_DATE",
-      [presente ? 1 : 0, username, bloque]
+      "UPDATE reservas SET asistio = ? WHERE email = ? AND bloque_horario = ? AND fecha = ?",
+      [presente ? 1 : 0, username, bloque, getFechaChile()]
     );
 
     if (result.affectedRows === 0) {

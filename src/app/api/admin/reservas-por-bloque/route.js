@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getFechaChile } from "@/app/utils/constants";
 
 export async function GET(request) {
   try {
@@ -29,9 +30,9 @@ export async function GET(request) {
         r.asistio
       FROM reservas r
       LEFT JOIN users u ON r.email = u.email
-      WHERE r.fecha = CURRENT_DATE
+      WHERE r.fecha = ?
     `;
-    const params = [];
+    const params = [getFechaChile()];
 
     if (sede) {
       query += " AND r.sede = ?";
