@@ -96,6 +96,85 @@ export async function POST(request) {
   }
 }
 
+// --- MÉTODO PUT: RESTABLECER BLOQUES ---
+export async function PUT(request) {
+  let connection;
+  try {
+    const userRole = request.headers.get('x-user-type');
+    const userEmail = request.headers.get('x-user');
+
+    if (!userEmail || userRole !== 'admin') {
+      return NextResponse.json(
+        { message: "Acceso denegado. Solo administradores pueden restablecer bloques." },
+        { status: 403 }
+      );
+    }
+
+    const { bloques, fecha } = await request.json();
+
+    if (!bloques || bloques.length === 0) {
+      return NextResponse.json(
+        { message: "Debes seleccionar al menos un bloque" },
+        { status: 400 }
+      );
+    }
+
+    const CUPOS_POR_SEDE = {
+      'Vitacura': 13,
+      'San Joaquín': 17,
+    };
+
+    const fechaTarget = fecha || getFechaChile();
+    let bloquesRestaurados = 0;
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    for (const item of bloques) {
+      const { bloque, sede } = item;
+      const cuposDefault = CUPOS_POR_SEDE[sede] || 15;
+
+      try {
+        const [updateResult] = await connection.execute(
+          `UPDATE cupos
+           SET total = ?
+           WHERE bloque = ?
+           AND sede = ?
+           AND fecha = ?`,
+          [cuposDefault, bloque, sede, fechaTarget]
+        );
+
+        if (updateResult.affectedRows > 0) {
+          bloquesRestaurados++;
+        }
+
+        console.log(`[RESTABLECER] Restaurado: ${bloque} en ${sede} (${fechaTarget}) -> ${cuposDefault} cupos`);
+      } catch (error) {
+        console.error(`[RESTABLECER] Error en ${bloque} - ${sede}:`, error);
+        throw error;
+      }
+    }
+
+    await connection.commit();
+
+    return NextResponse.json({
+      message: `Bloques restablecidos exitosamente`,
+      bloquesRestaurados,
+      fecha: fechaTarget
+    });
+
+  } catch (error) {
+    if (connection) await connection.rollback();
+    console.error("[RESTABLECER] Error Fatal:", error);
+    return NextResponse.json(
+      { message: "Error al restablecer bloques: " + error.message },
+      { status: 500 }
+    );
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
 // --- MÉTODO GET: OBTENER ESTADO ---
 export async function GET(request) {
   try {

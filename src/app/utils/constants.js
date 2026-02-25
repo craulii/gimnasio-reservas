@@ -10,12 +10,7 @@ export const BLOQUES_HORARIOS = [
   "12-13",
   "13-14",
   "14-15",
-  "15-16",
-  "16-17",
-  "17-18",
-  "18-19",
-  "19-20",
-  "20-21"
+  "15-16"
 ];
 
 // Sedes disponibles
@@ -268,7 +263,6 @@ export const HORARIOS_BLOQUE = {
   "11-12": { inicio: "16:05", fin: "17:25" },
   "13-14": { inicio: "17:30", fin: "18:50" },
   "15-16": { inicio: "18:55", fin: "20:15" },
-  "17-18": { inicio: "20:20", fin: "21:40" },
 };
 
 // Issue #15: Horarios límite centralizados (antes hardcodeados en procesar-ausencias)
@@ -282,7 +276,6 @@ export const HORARIOS_LIMITE = {
   "11-12": "16:20:00",
   "13-14": "17:45:00",
   "15-16": "19:10:00",
-  "17-18": "20:35:00",
 };
 
 // Issue #7: Helpers de timezone Chile

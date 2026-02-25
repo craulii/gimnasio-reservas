@@ -238,6 +238,13 @@ class ApiService {
     return await fetchWithAuth(`/api/admin/boton-panico?fecha=${fecha}`, { method: "GET" });
   }
 
+  static async restablecerBloques(bloques, fecha) {
+    return await fetchWithAuth('/api/admin/boton-panico', {
+      method: "PUT",
+      body: JSON.stringify({ bloques, fecha }),
+    });
+  }
+
   static async logout() {
     // Esto llama al archivo que creamos en el paso 1
     return await fetchWithAuth('/api/logout', { method: "POST" });

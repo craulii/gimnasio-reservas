@@ -13,7 +13,6 @@ const BLOQUES_DEFAULT = [
   { bloque: "11-12", cupos: 15 },
   { bloque: "13-14", cupos: 15 },
   { bloque: "15-16", cupos: 15 },
-  { bloque: "17-18", cupos: 15 },
 ];
 
 const CUPOS_POR_SEDE = {

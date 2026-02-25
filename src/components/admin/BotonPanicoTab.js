@@ -65,6 +65,44 @@ export default function BotonPanicoTab() {
     setSeleccionados([]);
   };
 
+  const restablecerBloques = async () => {
+    if (seleccionados.length === 0) {
+      setMensaje("⚠️ Debes seleccionar al menos un bloque para restablecer");
+      return;
+    }
+
+    const confirmacion = window.confirm(
+      `¿Restablecer ${seleccionados.length} bloque(s) a su capacidad normal?\n\nLos cupos volverán a su valor por defecto según la sede.`
+    );
+
+    if (!confirmacion) return;
+
+    setLoading(true);
+    setMensaje("Procesando...");
+
+    try {
+      const fecha = new Date().toISOString().split('T')[0];
+      const { ok, data } = await ApiService.restablecerBloques(seleccionados, fecha);
+
+      if (ok) {
+        setMensaje(
+          `✅ ${data.message}\n` +
+          `📊 Bloques restablecidos: ${data.bloquesRestaurados}`
+        );
+        setSeleccionados([]);
+        await cargarEstado();
+      } else {
+        const errorMsg = data?.message || data?.error || "Error al restablecer bloques";
+        setMensaje(`❌ Error: ${errorMsg}`);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMensaje("❌ Error de conexión");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const activarPanico = async () => {
     if (seleccionados.length === 0) {
       setMensaje("⚠️ Debes seleccionar al menos un bloque");
@@ -167,6 +205,17 @@ export default function BotonPanicoTab() {
         >
           {loading ? "⏳ Procesando..." : `🚨 ACTIVAR PÁNICO (${seleccionados.length})`}
         </button>
+        <button
+          onClick={restablecerBloques}
+          disabled={loading || seleccionados.length === 0}
+          className={`px-6 py-2 rounded font-bold transition ${
+            loading || seleccionados.length === 0
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+        >
+          {loading ? "⏳ Procesando..." : `✅ RESTABLECER BLOQUES (${seleccionados.length})`}
+        </button>
       </div>
 
       {/* Tabla de bloques */}
@@ -216,14 +265,14 @@ export default function BotonPanicoTab() {
       </div>
 
       {/* Leyenda */}
-      <div className="flex gap-6 text-sm text-gray-700">
+      <div className="flex gap-6 text-sm text-gray-700 flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-red-500 rounded"></div>
-          <span>Seleccionado para desactivar</span>
+          <span>Seleccionado</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-gray-300 border-2 border-gray-500 rounded"></div>
-          <span>Ya desactivado</span>
+          <span>Desactivado (seleccionar + Restablecer para reactivar)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-gray-200 border border-gray-400 rounded"></div>
