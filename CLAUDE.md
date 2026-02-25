@@ -9,6 +9,7 @@ Reservas de cupos diarios para el gimnasio. Alumnos reservan bloques horarios, a
 - **Backend:** 20 API Routes en `src/app/api/`
 - **Auth:** Cookies httpOnly (`user_session`) + middleware con roles (admin/alumno)
 - **Hosting:** Vercel (branch `vercel-supabase`) + ninjahost.cl (branch `master`)
+- **Deploy:** Push a `vercel-supabase` hace deploy automatico a Vercel Production
 
 ## Branches y bases de datos
 | Branch | Base de datos | Hosting | Estado |
@@ -24,8 +25,12 @@ src/lib/db.js              # Wrapper PostgreSQL (o MySQL en master)
 src/lib/rate-limit.js      # Rate limiter en memoria
 middleware.js              # Auth + headers x-user, x-user-type
 src/app/api/               # 20 endpoints API
-src/app/utils/constants.js # Constantes centralizadas
+src/app/utils/constants.js # Constantes centralizadas (HORARIOS_BLOQUE, HORARIOS_LIMITE, getFechaChile, etc)
 src/services/api.js        # Cliente HTTP del frontend
+src/hooks/useCupos.js      # Hook React para cargar cupos
+src/components/alumno/     # Componentes del dashboard alumno
+src/components/admin/      # Componentes del dashboard admin (GestionTab, ReservasTab, etc)
+src/components/pages/      # DashboardAdmin.js, DashboardAlumno.js
 supabase-schema.sql        # Schema PostgreSQL (solo en vercel-supabase)
 ```
 
@@ -45,6 +50,19 @@ Los tests son estaticos - verifican codigo fuente sin necesitar BD ni servidor.
 - Auth en endpoints admin: verificar `request.headers.get("x-user-type") === 'admin'`
 - Emails deben ser `@usm.cl`
 - Passwords con bcrypt cost 12
+- **Fechas:** Siempre usar `getFechaChile()` de constants.js (NUNCA `new Date().toISOString()` que es UTC)
+- **Asistencia:** reservas.asistio usa NULL=pendiente, 0=ausente, 1=presente, 2=auto-procesado
+- **Llamadas internas:** No usar HTTP fetch entre endpoints (falla auth). Usar funciones directas a BD
+- **UI cupos alumno:** Tarjetas con horario real (HORARIOS_BLOQUE), barra de progreso con color dinamico
+
+## Panel Admin - Tabs
+| Tab | Componente | Funcion |
+|-----|-----------|---------|
+| Gestion | GestionTab.js | Modificar cupos + toma de asistencia masiva |
+| Reservas | ReservasTab.js | Ver/cancelar reservas por bloque (filtro por sede) |
+| Estadisticas | EstadisticasTab.js | General, por alumno, por bloque (Recharts) |
+| Usuarios | UsuariosTab.js | CRUD usuarios, ban/unban |
+| Boton Panico | BotonPanicoTab.js | Desactivar bloques de emergencia |
 
 ## Credenciales de servicios (NO commitear)
 - Vercel: Token y project ID en sesion de trabajo
