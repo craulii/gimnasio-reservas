@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 // Asegúrate de que la ruta sea correcta según tu estructura
-import ApiService from "../../services/api"; 
+import ApiService from "../../services/api";
+import { HORARIOS_BLOQUE } from "../../app/utils/constants";
 
 export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCupos }) {
   const [sedeSeleccionada, setSedeSeleccionada] = useState("Vitacura");
@@ -155,46 +156,58 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
       ) : cuposFiltrados.length === 0 ? (
         <p className="text-center">No hay cupos disponibles en {sedeSeleccionada}</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {cuposFiltrados.map(([key, info]) => {
             const disponibles = info.total - info.reservados;
             const yaReservado = tieneReservaEn(info.bloque, info.sede);
-            
+            const horario = HORARIOS_BLOQUE[info.bloque];
+            const porcentajeOcupado = info.total > 0 ? (info.reservados / info.total) * 100 : 0;
+            const barColor = porcentajeOcupado > 85 ? "bg-red-500" : porcentajeOcupado >= 60 ? "bg-yellow-500" : "bg-green-500";
+
             return (
               <div
                 key={key}
-                className="flex justify-between items-center bg-white rounded p-3 shadow-sm"
+                className="bg-white rounded-lg p-4 shadow-sm"
               >
-                <div>
-                  <strong className="text-gray-800">Bloque {info.bloque}</strong>
-                  <p className="text-sm text-gray-600">
-                    Cupos: {disponibles} / {info.total} (Reservados: {info.reservados})
-                  </p>
-                  <p className="text-xs text-gray-500">{info.sede}</p>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <p className="text-xl font-bold text-gray-900">
+                      {horario ? `${horario.inicio} - ${horario.fin}` : `Bloque ${info.bloque}`}
+                    </p>
+                    {horario && (
+                      <p className="text-sm text-gray-500">Bloque {info.bloque}</p>
+                    )}
+                  </div>
+                  {yaReservado ? (
+                    <button
+                      onClick={() => cancelarReserva(info.bloque, info.sede)}
+                      className="px-4 py-2 rounded-lg text-white bg-red-600 hover:bg-red-700 transition font-medium"
+                    >
+                      Cancelar
+                    </button>
+                  ) : (
+                    <button
+                      disabled={disponibles <= 0}
+                      onClick={() => hacerReserva(info.bloque, info.sede)}
+                      className={`px-4 py-2 rounded-lg text-white font-medium ${
+                        disponibles > 0
+                          ? "bg-indigo-600 hover:bg-indigo-700"
+                          : "bg-gray-400 cursor-not-allowed"
+                      }`}
+                    >
+                      Reservar
+                    </button>
+                  )}
                 </div>
-                
-                {yaReservado ? (
-                  // Botón CANCELAR (rojo) si ya tiene reserva
-                  <button
-                    onClick={() => cancelarReserva(info.bloque, info.sede)}
-                    className="px-4 py-2 rounded text-white bg-red-600 hover:bg-red-700 transition"
-                  >
-                    Cancelar
-                  </button>
-                ) : (
-                  // Botón RESERVAR (indigo) si no tiene reserva
-                  <button
-                    disabled={disponibles <= 0}
-                    onClick={() => hacerReserva(info.bloque, info.sede)}
-                    className={`px-4 py-2 rounded text-white ${
-                      disponibles > 0
-                        ? "bg-indigo-600 hover:bg-indigo-700"
-                        : "bg-gray-400 cursor-not-allowed"
-                    }`}
-                  >
-                    Reservar
-                  </button>
-                )}
+                <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1">
+                  <div
+                    className={`h-2.5 rounded-full ${barColor}`}
+                    style={{ width: `${porcentajeOcupado}%` }}
+                  ></div>
+                </div>
+                <p className={`text-sm ${disponibles > 0 ? "text-gray-600" : "text-red-600 font-medium"}`}>
+                  {disponibles > 0 ? `${disponibles} cupos disponibles` : "Sin cupos"}
+                </p>
               </div>
             );
           })}
