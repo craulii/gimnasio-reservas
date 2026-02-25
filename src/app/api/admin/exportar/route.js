@@ -56,7 +56,7 @@ export async function GET(request) {
         LEFT JOIN reservas r ON c.bloque = r.bloque_horario AND c.fecha = r.fecha AND c.sede = r.sede
         LEFT JOIN users u ON r.email = u.email
         WHERE c.fecha BETWEEN ? AND ?
-        GROUP BY c.fecha, c.sede, c.bloque
+        GROUP BY c.fecha, c.sede, c.bloque, c.total, c.reservados
         ORDER BY c.fecha DESC, c.sede, c.bloque
       `, [fechaInicio, fechaFin]);
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getFechaChile } from "@/app/utils/constants";
 
 // --- MÉTODO POST: ACTIVAR PÁNICO (Bloquear horarios) ---
 export async function POST(request) {
@@ -24,7 +25,7 @@ export async function POST(request) {
       );
     }
 
-    const fechaTarget = fecha || new Date().toISOString().split('T')[0];
+    const fechaTarget = fecha || getFechaChile();
 
     let reservasCanceladas = 0;
     let cuposDesactivados = 0;
@@ -104,7 +105,7 @@ export async function GET(request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const fecha = searchParams.get("fecha") || new Date().toISOString().split('T')[0];
+    const fecha = searchParams.get("fecha") || getFechaChile();
 
     const [rows] = await pool.execute(
       `SELECT bloque, sede, total, reservados, fecha

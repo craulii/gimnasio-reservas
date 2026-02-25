@@ -57,7 +57,7 @@ export async function PATCH(request) {
 
     const { bloque, sede, cantidad, fecha } = await request.json();
 
-    const targetDate = fecha || new Date().toISOString().split('T')[0];
+    const targetDate = fecha || getFechaChile();
 
     // 2. ACTUALIZAR
     const [result] = await pool.execute(

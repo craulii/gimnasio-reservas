@@ -32,6 +32,7 @@ yarn-error.log*
 
 # session docs with credentials
 SESION.md
+SESSION.md
 
 # env files
 .env
