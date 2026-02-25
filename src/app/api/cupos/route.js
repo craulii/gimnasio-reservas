@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getFechaChile } from "@/app/utils/constants";
 
 // --- GET: OBTENER CUPOS (Público/Privado) ---
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const sede = searchParams.get('sede');
-    const fecha = searchParams.get('fecha') || new Date().toISOString().split('T')[0];
+    const fecha = searchParams.get('fecha') || getFechaChile();
 
     let query = "SELECT * FROM cupos WHERE fecha = ?";
     const params = [fecha];

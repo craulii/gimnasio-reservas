@@ -15,10 +15,11 @@ export function middleware(request) {
   // 1. DETERMINAR SI ES RUTA PÚBLICA O ARCHIVO ESTÁTICO
   const isPublicPath = PUBLIC_PATHS.some(path => pathname.startsWith(path));
   const isPublicGetCupos = pathname.startsWith('/api/cupos') && request.method === 'GET';
+  const isCronMantenimiento = pathname === '/api/admin/mantenimiento' && request.method === 'GET';
   const isStaticFile = pathname.includes('.');
 
   // Si es pública, dejamos pasar sin revisar cookies
-  if (isPublicPath || isPublicGetCupos || isStaticFile) {
+  if (isPublicPath || isPublicGetCupos || isCronMantenimiento || isStaticFile) {
     return NextResponse.next();
   }
 

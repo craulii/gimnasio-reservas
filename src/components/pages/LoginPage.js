@@ -17,7 +17,7 @@ export default function LoginPage({ setUser, message, setMessage }) {
             {/* Si usas Next.js, idealmente usa <Image /> aquí, pero img funciona bien */}
             <img src="/usm.png" alt="USM" className="mx-auto h-24 w-auto mb-4 drop-shadow-md" />
             <h1 className="mt-2 text-3xl font-extrabold text-white drop-shadow-sm">
-              crauli
+              Sistema de Reservas GYM USM
             </h1>
             <p className="mt-1 text-sm font-bold text-yellow-900">
               ¡Potencia tu entrenamiento con Defider!

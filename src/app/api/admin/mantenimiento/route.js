@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
+import { getFechaChile } from "@/app/utils/constants";
+
 // Configuración de bloques y sedes
 const BLOQUES_DEFAULT = [
   { bloque: "1-2", cupos: 15 },
@@ -14,13 +16,21 @@ const BLOQUES_DEFAULT = [
   { bloque: "17-18", cupos: 15 },
 ];
 
-const SEDES_DEFAULT = ['Santiago', 'Viña'];
+const CUPOS_POR_SEDE = {
+  'Vitacura': 13,
+  'San Joaquín': 17,
+};
+
+const SEDES_DEFAULT = ['Vitacura', 'San Joaquín'];
 
 // --- FUNCIONES AUXILIARES ---
 
 async function generarCuposDelDia(connection) {
+  const fechaChile = getFechaChile();
+
   const [existentes] = await connection.execute(
-    "SELECT COUNT(*) as count FROM cupos WHERE fecha = CURRENT_DATE"
+    "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
+    [fechaChile]
   );
 
   if (existentes[0].count > 0) {
@@ -28,13 +38,14 @@ async function generarCuposDelDia(connection) {
     return;
   }
 
-  console.log("Generando cupos para:", new Date().toISOString().split("T")[0]);
+  console.log("Generando cupos para:", fechaChile);
 
   for (const sede of SEDES_DEFAULT) {
+    const cuposSede = CUPOS_POR_SEDE[sede] || 15;
     for (const config of BLOQUES_DEFAULT) {
       await connection.execute(
-        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, CURRENT_DATE)",
-        [config.bloque, sede, config.cupos]
+        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+        [config.bloque, sede, cuposSede, fechaChile]
       );
     }
   }
@@ -43,6 +54,7 @@ async function generarCuposDelDia(connection) {
 }
 
 async function sincronizarContadores(connection) {
+  const fechaChile = getFechaChile();
   console.log("Sincronizando contadores de reservados...");
 
   await connection.execute(`
@@ -54,8 +66,8 @@ async function sincronizarContadores(connection) {
       AND r.fecha = c.fecha
       AND r.sede = c.sede
     )
-    WHERE c.fecha = CURRENT_DATE
-  `);
+    WHERE c.fecha = ?
+  `, [fechaChile]);
 
   console.log("Contadores sincronizados.");
 }
