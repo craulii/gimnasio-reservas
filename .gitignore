@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# session docs with credentials
+SESION.md
+
 # env files
 .env
 .env.local
