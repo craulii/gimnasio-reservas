@@ -7,10 +7,10 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 
-import GestionTab from "@/components/admin/GestionTab";
-import UsuariosTab from "@/components/admin/UsuariosTab";
-import ReservasTab from "@/components/admin/ReservasTab";
-import ReservarCupo from "@/components/alumno/ReservarCupo";
+import GodCupos from "@/components/godmode/GodCupos";
+import GodUsuarios from "@/components/godmode/GodUsuarios";
+import GodReservas from "@/components/godmode/GodReservas";
+import GodMiReserva from "@/components/godmode/GodMiReserva";
 import useCupos from "@/hooks/useCupos";
 
 const REFRESH_INTERVAL = 15;
@@ -295,32 +295,24 @@ export default function DashboardGodMode({ user, onLogout }) {
         )}
 
         {activeTab === 'gestion' && (
-          <div className="bg-stone-100 rounded-xl p-4">
-            <GestionTab cupos={cupos} setMessage={setMessage} fetchCupos={fetchCupos} />
-          </div>
+          <GodCupos cupos={cupos} setMessage={setMessage} fetchCupos={fetchCupos} />
         )}
 
         {activeTab === 'usuarios' && (
-          <div className="bg-stone-100 rounded-xl p-4">
-            <UsuariosTab setMessage={setMessage} />
-          </div>
+          <GodUsuarios setMessage={setMessage} />
         )}
 
         {activeTab === 'reservas' && (
-          <div className="bg-stone-100 rounded-xl p-4">
-            <ReservasTab cupos={cupos} setMessage={setMessage} fetchCupos={fetchCupos} />
-          </div>
+          <GodReservas setMessage={setMessage} fetchCupos={fetchCupos} />
         )}
 
         {activeTab === 'reservar' && (
-          <div className="bg-stone-100 rounded-xl p-4">
-            <ReservarCupo user={user} cupos={cupos} loading={cuposLoading} setMessage={setMessage} fetchCupos={fetchCupos} />
-          </div>
+          <GodMiReserva user={user} cupos={cupos} loading={cuposLoading} setMessage={setMessage} fetchCupos={fetchCupos} />
         )}
 
         {/* FOOTER */}
         <div className="text-center text-slate-700 text-[10px] font-mono py-2">
-          ChrisCrauli God Mode v2.0 &mdash; {data?.fecha || '---'} &mdash; {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString('es-CL') : ''}
+          ChrisCrauli God Mode v2.1 &mdash; {data?.fecha || '---'} &mdash; {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString('es-CL') : ''}
         </div>
       </div>
     </div>
