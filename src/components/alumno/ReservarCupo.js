@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 // Asegúrate de que la ruta sea correcta según tu estructura
 import ApiService from "../../services/api";
-import { HORARIOS_BLOQUE, HORARIOS_LIMITE, getHoraChile, sortByBloque } from "../../app/utils/constants";
+import { HORARIOS_BLOQUE, HORARIOS_CIERRE, getHoraChile, sortByBloque } from "../../app/utils/constants";
 
 export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCupos }) {
   const [sedeSeleccionada, setSedeSeleccionada] = useState("Vitacura");
@@ -104,9 +104,9 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
     return misReservas.some(r => r.bloque_horario === bloque && r.sede === sede);
   };
 
-  // Verificar si un bloque ya expiro (15 min despues de inicio)
+  // Verificar si un bloque ya expiro (25 min despues de inicio)
   const bloqueExpirado = (bloque) => {
-    const limite = HORARIOS_LIMITE[bloque];
+    const limite = HORARIOS_CIERRE[bloque];
     if (!limite) return false;
     return horaActual >= limite;
   };

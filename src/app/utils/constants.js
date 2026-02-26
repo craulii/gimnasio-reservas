@@ -266,7 +266,7 @@ export const HORARIOS_BLOQUE = {
 };
 
 // Issue #15: Horarios límite centralizados (antes hardcodeados en procesar-ausencias)
-// 15 min después de inicio del bloque
+// 15 min después de inicio del bloque — usado para procesar ausencias
 export const HORARIOS_LIMITE = {
   "1-2": "08:30:00",
   "3-4": "09:55:00",
@@ -276,6 +276,19 @@ export const HORARIOS_LIMITE = {
   "11-12": "16:20:00",
   "13-14": "17:45:00",
   "15-16": "19:10:00",
+};
+
+// 25 min después de inicio del bloque — cierre definitivo para nuevas reservas
+// Entre 15-25 min los alumnos pueden tomar cupos liberados por ausencias
+export const HORARIOS_CIERRE = {
+  "1-2":   "08:40:00",
+  "3-4":   "10:05:00",
+  "5-6":   "11:30:00",
+  "7-8":   "12:55:00",
+  "9-10":  "15:05:00",
+  "11-12": "16:30:00",
+  "13-14": "17:55:00",
+  "15-16": "19:20:00",
 };
 
 // Helpers de ordenamiento numerico de bloques

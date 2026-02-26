@@ -49,6 +49,7 @@ Los tests son estaticos - verifican codigo fuente sin necesitar BD ni servidor.
 - Transacciones: `pool.getConnection()` -> `beginTransaction()` -> `commit()/rollback()` -> `release()` en `finally`
 - Queries simples: `pool.query(sql, params)` o `pool.execute(sql, params)`
 - Auth en endpoints admin: verificar `request.headers.get("x-user-type") === 'admin'`
+- **Registro:** Solo pide RUT, nombre, email y password. El ROL USM NO se pide al registrarse (se inserta NULL). El admin puede asignarlo despues desde el modal de edicion.
 - Emails deben ser `@usm.cl`
 - Passwords con bcrypt cost 12
 - **Sesiones:** Cookie maxAge = 2 horas (no 24h)
@@ -79,8 +80,11 @@ Cupos por sede: Vitacura = 13, San Joaquin = 17.
 ## Modal Editar Usuario
 El modal (`ModalEditarUsuario.js`) permite editar: nombre, email, password, admin, RUT, rol institucional, faltas (3 = baneo auto) y baneado. El API PUT `/api/admin/usuarios` acepta todos estos campos. Esto tambien permite que `desbanearUsuario` funcione correctamente (envia `{baneado:0, faltas:0}`).
 
-## Bloqueo de reservas expiradas
-En `ReservarCupo.js`, los bloques se deshabilitan 15 minutos despues de su hora de inicio (usando `HORARIOS_LIMITE` de constants.js). El boton muestra "Bloque cerrado" y la tarjeta se atenua. El boton "Cancelar" NO se afecta (el alumno puede cancelar aunque el bloque ya empezo). La hora se actualiza cada 30 segundos con `getHoraChile()`.
+## Auto-liberacion de cupos y bloqueo de reservas
+- **15 min** (`HORARIOS_LIMITE`): Se auto-procesan ausencias (reservas pendientes -> falta + liberar cupo). Esto ocurre al consultar cupos (GET `/api/cupos`) y al intentar reservar (POST `/api/reservas`). Funcion compartida en `src/lib/procesar-ausencias.js`.
+- **15-25 min**: Ventana donde alumnos pueden tomar cupos recien liberados.
+- **25 min** (`HORARIOS_CIERRE`): Bloque cerrado para nuevas reservas. Validado server-side en POST `/api/reservas` y en frontend (`ReservarCupo.js`).
+- El boton "Cancelar" NO se afecta (el alumno puede cancelar aunque el bloque ya empezo). La hora se actualiza cada 30 segundos con `getHoraChile()`.
 
 ## Credenciales de servicios (NO commitear)
 - Vercel: Token y project ID en sesion de trabajo
@@ -103,10 +107,11 @@ git checkout vercel-supabase  # Branch PostgreSQL/Vercel
 ## Historial de sesiones
 
 ### Sesion 26-feb-2026
-Commits: `ada7601`, `6a1c753`, `5e6d580`
+Commits: `ada7601`, `6a1c753`, `5e6d580`, `805e869`
 1. **Sesiones 2h** - Reducido maxAge cookie de 24h a 2h
 2. **Edicion avanzada usuarios** - Modal con campos RUT, rol, faltas, baneado + API PUT actualizada (fix bug desbanear)
 3. **Orden numerico bloques** - Helpers `sortBloques`/`sortByBloque` aplicados en 4 componentes (alumno, gestion, reservas, estadisticas)
 4. **Bloqueo reservas expiradas** - Boton "Bloque cerrado" 15 min despues de inicio, tarjetas atenuadas
 5. **Cron DST fix** - Cambiado de `0 3 * * *` a `0 4 * * *` para funcionar en verano e invierno Chile
 6. **Auto-generacion cupos** - Fallback en GET /api/cupos si el cron no corrio
+7. **ROL eliminado del registro** - Registro basado solo en RUT. ROL es opcional, admin lo asigna desde modal. Header muerto `x-user-rol` eliminado del middleware.

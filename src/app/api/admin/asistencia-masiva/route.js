@@ -1,68 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, HORARIOS_LIMITE } from "@/app/utils/constants";
-
-// Comparación de hora robusta (misma lógica que procesar-ausencias)
-function horaAMinutos(hora) {
-  const [h, m] = hora.split(':').map(Number);
-  return h * 60 + m;
-}
-
-// Procesar ausencias automáticas directamente en BD (sin HTTP fetch)
-async function procesarAusenciasDirecto(bloque, sede, fecha) {
-  try {
-    const horaLimite = HORARIOS_LIMITE[bloque];
-    if (!horaLimite) return;
-
-    const horaActual = new Date().toLocaleTimeString('es-CL', {
-      timeZone: 'America/Santiago',
-      hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
-    });
-
-    if (horaAMinutos(horaActual) < horaAMinutos(horaLimite)) return;
-
-    const connection = await pool.getConnection();
-    try {
-      const [pendientes] = await connection.execute(
-        `SELECT r.id, r.email FROM reservas r
-         WHERE r.fecha = ? AND r.bloque_horario = ? AND r.sede = ? AND r.asistio IS NULL`,
-        [fecha, bloque, sede]
-      );
-
-      for (const reserva of pendientes) {
-        await connection.beginTransaction();
-        try {
-          await connection.execute("UPDATE reservas SET asistio = 2 WHERE id = ?", [reserva.id]);
-          await connection.execute("UPDATE users SET faltas = faltas + 1 WHERE email = ?", [reserva.email]);
-
-          const [user] = await connection.execute("SELECT faltas FROM users WHERE email = ? LIMIT 1", [reserva.email]);
-          if (user[0]?.faltas >= 3) {
-            await connection.execute("UPDATE users SET baneado = 1 WHERE email = ?", [reserva.email]);
-          }
-
-          await connection.execute(
-            "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = ?",
-            [bloque, sede, fecha]
-          );
-
-          await connection.commit();
-          console.log(`[AUTO-AUSENCIA] Falta registrada: ${reserva.email}`);
-        } catch (err) {
-          await connection.rollback();
-          console.error(`[AUTO-AUSENCIA] Error en reserva ${reserva.id}:`, err.message);
-        }
-      }
-
-      if (pendientes.length > 0) {
-        console.log(`[AUTO-AUSENCIA] Procesadas ${pendientes.length} ausencias para bloque ${bloque}`);
-      }
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    console.warn('[AUTO-AUSENCIA] Error:', error.message);
-  }
-}
+import { getFechaChile } from "@/app/utils/constants";
+import { procesarAusenciasDirecto } from "@/lib/procesar-ausencias";
 
 export async function POST(request) {
   // Issue #4 fix: Usar headers correctos en vez de JSON.parse

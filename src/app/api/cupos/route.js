@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
+import { procesarAusenciasDirecto } from "@/lib/procesar-ausencias";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -40,6 +41,13 @@ export async function GET(request) {
     // Fallback: si piden cupos de hoy y no existen, generarlos
     if (fecha === hoy) {
       await autoGenerarCupos(fecha);
+
+      // Auto-procesar ausencias (15 min después de inicio) para liberar cupos
+      for (const bloque of BLOQUES_HORARIOS) {
+        for (const s of SEDES) {
+          await procesarAusenciasDirecto(bloque, s, fecha);
+        }
+      }
     }
 
     let query = "SELECT * FROM cupos WHERE fecha = ?";

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile } from "@/app/utils/constants";
+import { getFechaChile, HORARIOS_CIERRE } from "@/app/utils/constants";
+import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
 
 // Función de mantenimiento (Reseteo de Faltas)
 async function verificarYResetearFaltas(connection, email, ultimoReset, faltasActuales) {
@@ -85,12 +86,28 @@ export async function POST(request) {
 
     console.log(`[RESERVA] Intento: ${user.email} -> ${bloque_horario} en ${sede}`);
 
+    // F0. Auto-procesar ausencias para liberar cupos (si ya pasaron 15 min)
+    const hoyChile = getFechaChile();
+    await procesarAusenciasDirecto(bloque_horario, sede, hoyChile);
+
+    // F1. Verificar cierre de bloque (25 min después de inicio)
+    const horaCierre = HORARIOS_CIERRE[bloque_horario];
+    if (horaCierre) {
+      const horaActual = new Date().toLocaleTimeString('es-CL', {
+        timeZone: 'America/Santiago',
+        hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      if (horaAMinutos(horaActual) >= horaAMinutos(horaCierre)) {
+        connection.release();
+        return NextResponse.json({ error: "Bloque cerrado para nuevas reservas" }, { status: 400 });
+      }
+    }
+
     // Issue #5 fix: Mover verificación DENTRO de la transacción con lock pesimista
     await connection.beginTransaction();
 
     try {
       // F. Verificar Cupos Disponibles (con lock FOR UPDATE)
-      const hoyChile = getFechaChile();
       const [cuposResult] = await connection.execute(
         'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = ? FOR UPDATE',
         [bloque_horario, sede, hoyChile]
