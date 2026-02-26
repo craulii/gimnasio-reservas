@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riquelmep@usm.cl'];
+
 const PUBLIC_PATHS = [
   '/api/login',
   '/api/auth/register',
@@ -50,10 +52,12 @@ export function middleware(request) {
     const requestHeaders = new Headers(request.headers);
     // Inyectamos los datos para que los archivos route.js los lean con request.headers.get()
     requestHeaders.set('x-user', sessionData.email);
-    requestHeaders.set('x-user-type', sessionData.role_type);
-    
+    const isGodMode = GOD_MODE_EMAILS.includes(sessionData.email);
+    requestHeaders.set('x-user-type', isGodMode ? 'admin' : sessionData.role_type);
+
     // Importante: También protegemos el acceso cruzado de roles aquí mismo
-    if (pathname.startsWith('/admin') && sessionData.role_type !== 'admin') {
+    // God Mode users pueden acceder a rutas /admin aunque su role_type sea 'alumno'
+    if (pathname.startsWith('/admin') && sessionData.role_type !== 'admin' && !isGodMode) {
       return NextResponse.redirect(new URL('/', request.url));
     }
 

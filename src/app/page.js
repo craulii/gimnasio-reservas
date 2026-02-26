@@ -7,7 +7,7 @@ import DashboardGodMode from "@/components/pages/DashboardGodMode";
 import DashboardAdmin from "@/components/pages/DashboardAdmin";
 import DashboardAlumno from "@/components/pages/DashboardAlumno";
 
-const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl'];
+const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riquelmep@usm.cl'];
 
 export default function Home() {
   const [user, setUser] = useState(null);

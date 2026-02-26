@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile } from "@/app/utils/constants";
 
-const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl'];
+const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riquelmep@usm.cl'];
 
 export async function GET(request) {
   try {
@@ -75,13 +75,15 @@ export async function GET(request) {
         ORDER BY fecha ASC`
       ),
 
-      // 7. Ultimo mantenimiento
+      // 7. Verificar si cron/fallback genero cupos hoy
       (async () => {
         try {
           const [rows] = await pool.execute(
-            `SELECT * FROM mantenimiento_logs ORDER BY created_at DESC LIMIT 1`
+            `SELECT COUNT(*) as cupos_generados FROM cupos WHERE fecha = ?`,
+            [hoy]
           );
-          return rows[0] || null;
+          const count = Number(rows[0]?.cupos_generados || 0);
+          return { cupos_generados: count, status: count > 0 ? 'ok' : 'sin_cupos' };
         } catch {
           return null;
         }
