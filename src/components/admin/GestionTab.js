@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { FiPlus, FiMinus, FiSave, FiRefreshCw } from "react-icons/fi";
 // Asegúrate de que la ruta sea correcta (2 niveles arriba si está en components/admin/)
 import ApiService from "../../services/api";
-import { getFechaChile } from "../../app/utils/constants";
+import { getFechaChile, sortByBloque } from "../../app/utils/constants";
 
 export default function GestionTab({ cupos, setMessage, fetchCupos }) {
   const [bloque, setBloque] = useState("");
@@ -208,8 +208,8 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
     return acc;
   }, {});
 
-  const cuposSedeSeleccionada = cuposPorSede[sede] || [];
-  const cuposAsistenciaSedeSeleccionada = cuposPorSede[sedeAsistencia] || [];
+  const cuposSedeSeleccionada = (cuposPorSede[sede] || []).sort(sortByBloque);
+  const cuposAsistenciaSedeSeleccionada = (cuposPorSede[sedeAsistencia] || []).sort(sortByBloque);
 
   const contadores = {
     presentes: Object.values(asistencias).filter(a => a === true).length,

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { FiX, FiRefreshCw } from "react-icons/fi";
 import ApiService from "../../services/api";
+import { sortBloques } from "../../app/utils/constants";
 
 export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
   const [loading, setLoading] = useState(false);
@@ -135,7 +136,7 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
         </div>
       ) : (
         <div className="space-y-3">
-          {Object.entries(reservas).map(([bloqueKey, usuarios]) => {
+          {Object.entries(reservas).sort(([a], [b]) => sortBloques(a, b)).map(([bloqueKey, usuarios]) => {
             if (!Array.isArray(usuarios)) return null;
             const estaExpandido = expandido[bloqueKey];
             const sedeBloque = usuarios?.[0]?.sede || sede;

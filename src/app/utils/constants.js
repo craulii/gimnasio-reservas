@@ -278,6 +278,14 @@ export const HORARIOS_LIMITE = {
   "15-16": "19:10:00",
 };
 
+// Helpers de ordenamiento numerico de bloques
+export function sortBloques(a, b) {
+  return parseInt(a.split('-')[0]) - parseInt(b.split('-')[0]);
+}
+export function sortByBloque(a, b) {
+  return parseInt(a.bloque.split('-')[0]) - parseInt(b.bloque.split('-')[0]);
+}
+
 // Issue #7: Helpers de timezone Chile
 export function getFechaChile() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });

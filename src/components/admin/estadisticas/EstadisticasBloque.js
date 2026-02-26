@@ -3,6 +3,7 @@ import { useState } from "react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 // Asegúrate de que la ruta sea correcta
 import ApiService from "../../../services/api";
+import { sortBloques } from "../../../app/utils/constants";
 
 export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMessage, setLoading }) {
   const [bloqueSeleccionado, setBloqueSeleccionado] = useState("");
@@ -50,7 +51,7 @@ export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMe
 
   // Extraer bloques únicos de cupos (Protección contra null)
   const cuposData = cupos || {};
-  const bloquesDisponibles = [...new Set(Object.values(cuposData).map(c => c.bloque))].sort();
+  const bloquesDisponibles = [...new Set(Object.values(cuposData).map(c => c.bloque))].sort(sortBloques);
 
   // Preparar datos para gráficos (Protección con ?.)
   const dataPorDia = estadisticasBloque?.datosPorDia?.slice(0, 14).reverse().map(d => ({

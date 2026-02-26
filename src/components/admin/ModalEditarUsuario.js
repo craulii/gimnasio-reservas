@@ -10,6 +10,10 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
     newEmail: "",
     password: "",
     isAdmin: false,
+    rut: "",
+    rol: "",
+    faltas: 0,
+    baneado: false,
   });
 
   useEffect(() => {
@@ -18,8 +22,12 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
         name: usuario.name,
         email: usuario.email,
         newEmail: usuario.email,
-        password: "", // La contraseña siempre inicia vacía por seguridad
+        password: "",
         isAdmin: usuario.is_admin === 1,
+        rut: usuario.rut || "",
+        rol: usuario.rol || "",
+        faltas: usuario.faltas || 0,
+        baneado: usuario.baneado === 1,
       });
     }
   }, [usuario]);
@@ -46,7 +54,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-bold text-gray-900 mb-4 border-b pb-2">
           Editar Usuario
         </h3>
@@ -99,6 +107,59 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
             />
             <label htmlFor="isAdminCheck" className="ml-2 block text-sm font-medium text-gray-700 cursor-pointer">
               Otorgar permisos de Administrador
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              RUT
+            </label>
+            <input
+              type="text"
+              value={formUsuario.rut}
+              onChange={(e) => setFormUsuario({ ...formUsuario, rut: e.target.value })}
+              placeholder="12.345.678-9"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Rol Institucional
+            </label>
+            <input
+              type="text"
+              value={formUsuario.rol}
+              onChange={(e) => setFormUsuario({ ...formUsuario, rol: e.target.value })}
+              placeholder="Ej: Alumno, Funcionario..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Faltas
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={formUsuario.faltas}
+              onChange={(e) => setFormUsuario({ ...formUsuario, faltas: parseInt(e.target.value) || 0 })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">3 faltas = baneo automatico</p>
+          </div>
+
+          <div className={`flex items-center p-3 rounded-md border ${formUsuario.baneado ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}`}>
+            <input
+              type="checkbox"
+              id="baneadoCheck"
+              checked={formUsuario.baneado}
+              onChange={(e) => setFormUsuario({ ...formUsuario, baneado: e.target.checked })}
+              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded cursor-pointer"
+            />
+            <label htmlFor="baneadoCheck" className={`ml-2 block text-sm font-medium cursor-pointer ${formUsuario.baneado ? 'text-red-700' : 'text-gray-700'}`}>
+              Usuario Baneado
             </label>
           </div>
         </div>

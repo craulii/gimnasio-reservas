@@ -200,10 +200,10 @@ describe('Seguridad de cookies (login)', () => {
     assert.includes(login, 'sameSite');
   });
 
-  it('maxAge es 24 horas', () => {
+  it('maxAge es 2 horas', () => {
     assert.ok(
-      login.includes('86400') || login.includes('60 * 60 * 24'),
-      'Cookie maxAge debe ser 24 horas (86400 o 60*60*24)'
+      login.includes('7200') || login.includes('60 * 60 * 2'),
+      'Cookie maxAge debe ser 2 horas (7200 o 60*60*2)'
     );
   });
 });

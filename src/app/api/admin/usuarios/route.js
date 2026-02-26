@@ -62,7 +62,7 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
 
-    const { email, name, newEmail, password, isAdmin, rut, rol } = await request.json();
+    const { email, name, newEmail, password, isAdmin, rut, rol, faltas, baneado } = await request.json();
 
     if (!email || !name) {
       return NextResponse.json({ error: "Email y nombre son obligatorios" }, { status: 400 });
@@ -116,6 +116,18 @@ export async function PUT(request) {
     if (typeof rol === "string" && rol.trim() !== "") {
       updateParts.push("rol = ?");
       updateParams.push(rol.trim());
+    }
+
+    // Actualizar Faltas
+    if (typeof faltas === "number" && faltas >= 0) {
+      updateParts.push("faltas = ?");
+      updateParams.push(Math.floor(faltas));
+    }
+
+    // Actualizar Baneado
+    if (typeof baneado !== "undefined") {
+      updateParts.push("baneado = ?");
+      updateParams.push(baneado ? 1 : 0);
     }
 
     // Actualizar Email

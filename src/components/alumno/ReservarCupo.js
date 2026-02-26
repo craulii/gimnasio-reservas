@@ -2,16 +2,25 @@
 import { useState, useEffect } from "react";
 // Asegúrate de que la ruta sea correcta según tu estructura
 import ApiService from "../../services/api";
-import { HORARIOS_BLOQUE } from "../../app/utils/constants";
+import { HORARIOS_BLOQUE, HORARIOS_LIMITE, getHoraChile, sortByBloque } from "../../app/utils/constants";
 
 export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCupos }) {
   const [sedeSeleccionada, setSedeSeleccionada] = useState("Vitacura");
   const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
   const [misReservas, setMisReservas] = useState([]);
+  const [horaActual, setHoraActual] = useState(getHoraChile());
 
   // Obtener las reservas del alumno al cargar
   useEffect(() => {
     obtenerMisReservas();
+  }, []);
+
+  // Mantener hora actualizada cada 30 segundos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHoraActual(getHoraChile());
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const obtenerMisReservas = async () => {
@@ -95,11 +104,18 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
     return misReservas.some(r => r.bloque_horario === bloque && r.sede === sede);
   };
 
+  // Verificar si un bloque ya expiro (15 min despues de inicio)
+  const bloqueExpirado = (bloque) => {
+    const limite = HORARIOS_LIMITE[bloque];
+    if (!limite) return false;
+    return horaActual >= limite;
+  };
+
   // Filtrar cupos por sede seleccionada (manejo seguro si cupos es null/undefined)
   const cuposData = cupos || {};
-  const cuposFiltrados = Object.entries(cuposData).filter(([key, info]) => 
+  const cuposFiltrados = Object.entries(cuposData).filter(([key, info]) =>
     info.sede === sedeSeleccionada
-  );
+  ).sort(([, a], [, b]) => sortByBloque(a, b));
 
   return (
     <div className="bg-gray-200 p-4 rounded-lg">
@@ -163,11 +179,12 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
             const horario = HORARIOS_BLOQUE[info.bloque];
             const porcentajeOcupado = info.total > 0 ? (info.reservados / info.total) * 100 : 0;
             const barColor = porcentajeOcupado > 85 ? "bg-red-500" : porcentajeOcupado >= 60 ? "bg-yellow-500" : "bg-green-500";
+            const expirado = bloqueExpirado(info.bloque);
 
             return (
               <div
                 key={key}
-                className="bg-white rounded-lg p-4 shadow-sm"
+                className={`bg-white rounded-lg p-4 shadow-sm ${expirado && !yaReservado ? 'opacity-60' : ''}`}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -187,15 +204,17 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
                     </button>
                   ) : (
                     <button
-                      disabled={disponibles <= 0}
+                      disabled={disponibles <= 0 || expirado}
                       onClick={() => hacerReserva(info.bloque, info.sede)}
                       className={`px-4 py-2 rounded-lg text-white font-medium ${
-                        disponibles > 0
-                          ? "bg-indigo-600 hover:bg-indigo-700"
-                          : "bg-gray-400 cursor-not-allowed"
+                        expirado
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : disponibles > 0
+                            ? "bg-indigo-600 hover:bg-indigo-700"
+                            : "bg-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      Reservar
+                      {expirado ? "Bloque cerrado" : disponibles <= 0 ? "Sin cupos" : "Reservar"}
                     </button>
                   )}
                 </div>
