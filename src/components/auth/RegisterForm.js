@@ -11,7 +11,6 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
     email: "",
     password: "",
     confirmPassword: "",
-    rol: "",
     rut: "",
   });
   
@@ -63,14 +62,6 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
       return;
     }
 
-    // Validación del rol
-    const rolRegex = /^\d{9}-\d{1}$/;
-    if (!rolRegex.test(registerData.rol)) {
-      setMessage("El formato del rol debe ser: 123456789-0");
-      setLoading(false);
-      return;
-    }
-
     // Normalizar y validar RUT antes de enviar
     // NOTA: Si no tienes el archivo lib/rut, avísame para darte esa función aquí mismo
     const rutNormalizado = normalizarRut(registerData.rut);
@@ -98,7 +89,6 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
           email: "",
           password: "",
           confirmPassword: "",
-          rol: "",
           rut: "",
         });
         setPasswordError("");
@@ -143,25 +133,6 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
         </div>
       </div>
       
-      <div>
-        <label htmlFor="register-rol" className="block text-sm font-medium text-yellow-800">
-          Rol USM
-        </label>
-        <div className="mt-1 relative">
-          <input
-            id="register-rol"
-            type="text"
-            required
-            placeholder="123456789-0"
-            pattern="^\d{9}-\d{1}$"
-            title="Formato: 123456789-0"
-            className="block w-full pl-3 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
-            value={registerData.rol}
-            onChange={(e) => setRegisterData({ ...registerData, rol: e.target.value })}
-          />
-        </div>
-      </div>
-
       <div>
         <label htmlFor="register-rut" className="block text-sm font-medium text-yellow-800">
           RUT

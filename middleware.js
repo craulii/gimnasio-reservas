@@ -50,7 +50,6 @@ export function middleware(request) {
     const requestHeaders = new Headers(request.headers);
     // Inyectamos los datos para que los archivos route.js los lean con request.headers.get()
     requestHeaders.set('x-user', sessionData.email);
-    requestHeaders.set('x-user-rol', sessionData.rol_usm || '');
     requestHeaders.set('x-user-type', sessionData.role_type);
     
     // Importante: También protegemos el acceso cruzado de roles aquí mismo

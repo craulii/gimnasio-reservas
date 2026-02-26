@@ -226,10 +226,10 @@ describe('Validaciones de entrada', () => {
     assert.includes(register, '@usm.cl');
   });
 
-  it('register valida formato de rol/RUT', () => {
+  it('register valida formato de RUT', () => {
     assert.ok(
-      register.includes('ROL_REGEX') || register.includes('rol'),
-      'Register valida rol'
+      register.includes('validarRut') || register.includes('normalizarRut'),
+      'Register valida RUT'
     );
   });
 

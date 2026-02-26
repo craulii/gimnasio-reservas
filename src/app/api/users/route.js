@@ -34,7 +34,7 @@ export async function POST(request) {
 
     const { name, email, password, rol } = await request.json();
 
-    if (!name || !email || !password || !rol) {
+    if (!name || !email || !password) {
       return NextResponse.json({ error: "Faltan datos obligatorios" }, { status: 400 });
     }
 
@@ -51,7 +51,7 @@ export async function POST(request) {
 
     await pool.execute(
       "INSERT INTO users (name, email, password, rol, is_admin, baneado, faltas) VALUES (?, ?, ?, ?, 0, 0, 0)",
-      [name, email, hashedPassword, rol]
+      [name, email, hashedPassword, rol || null]
     );
 
     return NextResponse.json({ message: "Usuario creado exitosamente" }, { status: 201 });

@@ -5,7 +5,6 @@ import pool from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
-const ROL_REGEX = /^\d{9}-\d{1}$/;
 
 function isUsmEmail(email) {
   return USM_EMAIL_REGEX.test(String(email).trim().toLowerCase());
@@ -20,16 +19,12 @@ export async function POST(request) {
       return NextResponse.json({ error: "Demasiados intentos. Intenta de nuevo en 15 minutos." }, { status: 429 });
     }
 
-    const { rol, rut, name, email, password, confirmPassword } = await request.json();
+    const { rut, name, email, password, confirmPassword } = await request.json();
 
     // --- 1. VALIDACIONES DE ENTRADA (Sin BDD) ---
 
-    if (!rol || !rut || !name || !email || !password || !confirmPassword) {
+    if (!rut || !name || !email || !password || !confirmPassword) {
       return NextResponse.json({ error: "Todos los campos son obligatorios" }, { status: 400 });
-    }
-
-    if (!ROL_REGEX.test(rol)) {
-      return NextResponse.json({ error: "Formato de rol inválido (debe ser: 202104687-9)" }, { status: 400 });
     }
 
     const rutNorm = normalizarRut(rut);
@@ -67,15 +62,15 @@ export async function POST(request) {
     const passwordHash = await bcrypt.hash(password, 12);
 
     await pool.execute(
-      "INSERT INTO users (rol, rut, name, email, password, is_admin, faltas, baneado) VALUES (?, ?, ?, ?, ?, 0, 0, 0)",
-      [rol, rutNorm, normalizedName, normalizedEmail, passwordHash]
+      "INSERT INTO users (rol, rut, name, email, password, is_admin, faltas, baneado) VALUES (NULL, ?, ?, ?, ?, 0, 0, 0)",
+      [rutNorm, normalizedName, normalizedEmail, passwordHash]
     );
 
     console.log(`[REGISTER] Usuario creado: ${normalizedName} (${normalizedEmail})`);
 
     return NextResponse.json({
       message: "Usuario creado exitosamente",
-      user: { name: normalizedName, email: normalizedEmail, rol, rut: rutNorm },
+      user: { name: normalizedName, email: normalizedEmail, rut: rutNorm },
     }, { status: 201 });
 
   } catch (error) {
