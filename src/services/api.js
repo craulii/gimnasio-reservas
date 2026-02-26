@@ -245,6 +245,12 @@ class ApiService {
     });
   }
 
+  // --- GOD MODE: MONITOR ---
+
+  static async getMonitorData() {
+    return await fetchWithAuth('/api/admin/monitor', { method: "GET" });
+  }
+
   static async logout() {
     // Esto llama al archivo que creamos en el paso 1
     return await fetchWithAuth('/api/logout', { method: "POST" });

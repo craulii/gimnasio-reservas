@@ -106,7 +106,11 @@ git checkout vercel-supabase  # Branch PostgreSQL/Vercel
 
 ## Historial de sesiones
 
-### Sesion 26-feb-2026
+### Sesion 26-feb-2026 (tarde)
+Commits: `657c986`
+8. **Auto-liberar cupos + bloque cerrado 25 min** - Extraido `procesarAusenciasDirecto` a `src/lib/procesar-ausencias.js` (modulo compartido). Auto-procesar ausencias al consultar cupos (GET /api/cupos) y al reservar (POST /api/reservas). Nuevo `HORARIOS_CIERRE` (25 min) para cierre definitivo, validado server-side y frontend. Ventana 15-25 min para tomar cupos liberados.
+
+### Sesion 26-feb-2026 (manana)
 Commits: `ada7601`, `6a1c753`, `5e6d580`, `805e869`
 1. **Sesiones 2h** - Reducido maxAge cookie de 24h a 2h
 2. **Edicion avanzada usuarios** - Modal con campos RUT, rol, faltas, baneado + API PUT actualizada (fix bug desbanear)

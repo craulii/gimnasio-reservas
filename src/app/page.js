@@ -3,8 +3,11 @@ import { useState, useEffect } from "react";
 import ApiService from "@/services/api";
 
 import LoginPage from "@/components/pages/LoginPage";
+import DashboardGodMode from "@/components/pages/DashboardGodMode";
 import DashboardAdmin from "@/components/pages/DashboardAdmin";
 import DashboardAlumno from "@/components/pages/DashboardAlumno";
+
+const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl'];
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -93,19 +96,24 @@ export default function Home() {
     );
   }
 
-  // 3. RUTA ADMIN
+  // 3. RUTA GOD MODE (secreto, solo emails autorizados)
+  if (user.role_type === 'admin' && GOD_MODE_EMAILS.includes(user.email)) {
+    return <DashboardGodMode user={user} onLogout={handleLogout} />;
+  }
+
+  // 4. RUTA ADMIN
   if (user.role_type === 'admin') {
     return (
-      <DashboardAdmin 
-        user={user} 
-        message={message} 
-        setMessage={setMessage} 
-        onLogout={handleLogout} 
+      <DashboardAdmin
+        user={user}
+        message={message}
+        setMessage={setMessage}
+        onLogout={handleLogout}
       />
     );
   }
 
-  // 4. RUTA ALUMNO (Última opción, solo accesible si está logueado y no es admin)
+  // 5. RUTA ALUMNO (Última opción, solo accesible si está logueado y no es admin)
   return (
     <DashboardAlumno 
       user={user} 
