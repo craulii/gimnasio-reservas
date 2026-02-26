@@ -1,6 +1,33 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile } from "@/app/utils/constants";
+import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
+
+const CUPOS_POR_SEDE = {
+  'Vitacura': 13,
+  'San Joaquín': 17,
+};
+const SEDES = ['Vitacura', 'San Joaquín'];
+
+// Fallback: genera cupos del dia si el cron no corrio
+async function autoGenerarCupos(fecha) {
+  const [existentes] = await pool.execute(
+    "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
+    [fecha]
+  );
+  if (existentes[0].count > 0) return;
+
+  console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fecha);
+  for (const sede of SEDES) {
+    const cuposSede = CUPOS_POR_SEDE[sede];
+    for (const bloque of BLOQUES_HORARIOS) {
+      await pool.execute(
+        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+        [bloque, sede, cuposSede, fecha]
+      );
+    }
+  }
+  console.log("[AUTO-CUPOS] Cupos generados exitosamente");
+}
 
 // --- GET: OBTENER CUPOS (Público/Privado) ---
 export async function GET(request) {
@@ -8,6 +35,12 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const sede = searchParams.get('sede');
     const fecha = searchParams.get('fecha') || getFechaChile();
+    const hoy = getFechaChile();
+
+    // Fallback: si piden cupos de hoy y no existen, generarlos
+    if (fecha === hoy) {
+      await autoGenerarCupos(fecha);
+    }
 
     let query = "SELECT * FROM cupos WHERE fecha = ?";
     const params = [fecha];
