@@ -9,7 +9,7 @@ export async function GET(request) {
     const userRole = request.headers.get("x-user-type");
     const userEmail = request.headers.get("x-user");
 
-    if (!userEmail || userRole !== 'admin' || !GOD_MODE_EMAILS.includes(userEmail)) {
+    if (!userEmail || !GOD_MODE_EMAILS.includes(userEmail)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 

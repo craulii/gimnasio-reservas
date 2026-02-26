@@ -97,7 +97,7 @@ export default function Home() {
   }
 
   // 3. RUTA GOD MODE (secreto, solo emails autorizados)
-  if (user.role_type === 'admin' && GOD_MODE_EMAILS.includes(user.email)) {
+  if (GOD_MODE_EMAILS.includes(user.email)) {
     return <DashboardGodMode user={user} onLogout={handleLogout} />;
   }
 
