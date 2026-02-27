@@ -6,7 +6,7 @@ Reservas de cupos diarios para el gimnasio. Alumnos reservan bloques horarios, a
 
 ## Stack
 - **Framework:** Next.js 16 (App Router) + React 18 + Tailwind CSS 4
-- **Backend:** 20 API Routes en `src/app/api/`
+- **Backend:** 21 API Routes en `src/app/api/`
 - **Auth:** Cookies httpOnly (`user_session`, maxAge 2h) + middleware con roles (admin/alumno)
 - **Hosting:** Vercel (branch `vercel-supabase`) + ninjahost.cl (branch `master`)
 - **Deploy:** Push a `vercel-supabase` hace deploy automatico a Vercel Production
@@ -14,7 +14,7 @@ Reservas de cupos diarios para el gimnasio. Alumnos reservan bloques horarios, a
 ## Branches y bases de datos
 | Branch | Base de datos | Hosting | Estado |
 |--------|--------------|---------|--------|
-| `master` | MySQL (mysql2) en ninjahost local | ninjahost.cl | Produccion original (18 commits atras) |
+| `master` | MySQL (mysql2) en ninjahost local | ninjahost.cl | Produccion original (22 commits atras) |
 | `vercel-supabase` | PostgreSQL (pg) en Supabase | Vercel | Produccion activa |
 
 **IMPORTANTE:** El branch `vercel-supabase` tiene un wrapper en `src/lib/db.js` que convierte la API de mysql2 a pg automaticamente (placeholders `?` -> `$1`, retorna `[rows, fields]`, sintetiza `affectedRows`). Los route.js usan la misma sintaxis mysql2 pero el wrapper traduce todo a PostgreSQL.
@@ -23,21 +23,23 @@ Reservas de cupos diarios para el gimnasio. Alumnos reservan bloques horarios, a
 ```
 src/lib/db.js              # Wrapper PostgreSQL (o MySQL en master)
 src/lib/rate-limit.js      # Rate limiter en memoria
+src/lib/procesar-ausencias.js # Auto-procesar ausencias (compartido entre cupos y reservas)
 middleware.js              # Auth + headers x-user, x-user-type
-src/app/api/               # 20 endpoints API
-src/app/utils/constants.js # Constantes centralizadas (HORARIOS_BLOQUE, HORARIOS_LIMITE, getFechaChile, sortBloques, etc)
+src/app/api/               # 21 endpoints API
+src/app/utils/constants.js # Constantes centralizadas (BLOQUES_HORARIOS, HORARIOS_BLOQUE, HORARIOS_LIMITE, getFechaChile, sortBloques, etc)
 src/services/api.js        # Cliente HTTP del frontend
 src/hooks/useCupos.js      # Hook React para cargar cupos
 src/components/alumno/     # Componentes del dashboard alumno
 src/components/admin/      # Componentes del dashboard admin (GestionTab, ReservasTab, etc)
-src/components/pages/      # DashboardAdmin.js, DashboardAlumno.js
+src/components/godmode/    # Componentes God Mode (GodCupos, GodUsuarios, GodReservas, GodMiReserva, GodModalUsuario)
+src/components/pages/      # DashboardAdmin.js, DashboardAlumno.js, DashboardGodMode.js, LoginPage.js
 vercel.json                # Cron job de mantenimiento diario
 supabase-schema.sql        # Schema PostgreSQL (solo en vercel-supabase)
 ```
 
 ## Tests
 ```bash
-npm test              # 328 tests (3 suites)
+npm test              # 338 tests (3 suites)
 npm run test:security # Seguridad
 npm run test:arch     # Arquitectura
 npm run test:bugs     # Bug fixes
@@ -80,6 +82,11 @@ Cupos por sede: Vitacura = 13, San Joaquin = 17.
 | Estadisticas | EstadisticasTab.js | General, por alumno, por bloque (Recharts) |
 | Usuarios | UsuariosTab.js | CRUD usuarios, ban/unban, edicion avanzada (rut, rol, faltas, baneado) |
 | Boton Panico | BotonPanicoTab.js | Desactivar bloques de emergencia |
+
+## God Mode
+Dashboard secreto con UI dark theme (slate-950/cyan/emerald) para emails autorizados: `jose.vargasv@usm.cl`, `crauli1@usm.cl`, `christian.riquelmep@usm.cl`. Definidos en `page.js` y `admin/monitor/route.js`. El middleware override `x-user-type` a `'admin'` para estos emails.
+
+Tabs: Monitor (estado del sistema via `/api/admin/monitor`), Gestion (cupos + asistencia), Usuarios, Reservas, Mi Reserva. Componentes propios en `src/components/godmode/`.
 
 ## Modal Editar Usuario
 El modal (`ModalEditarUsuario.js`) permite editar: nombre, email, password, admin, RUT, rol institucional, faltas (3 = baneo auto) y baneado. El API PUT `/api/admin/usuarios` acepta todos estos campos. Esto tambien permite que `desbanearUsuario` funcione correctamente (envia `{baneado:0, faltas:0}`).

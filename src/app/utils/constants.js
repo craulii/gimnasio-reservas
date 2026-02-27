@@ -254,14 +254,14 @@ export const BLOQUE_REGEX = /^\d{1,2}-\d{1,2}$/;
 
 // Horarios reales de cada bloque (inicio y fin de clase)
 export const HORARIOS_BLOQUE = {
-  "1-2":   { inicio: "08:15", fin: "09:35" },
-  "3-4":   { inicio: "09:40", fin: "11:00" },
-  "5-6":   { inicio: "11:05", fin: "12:25" },
-  "7-8":   { inicio: "12:30", fin: "13:50" },
-  "9-10":  { inicio: "14:40", fin: "16:00" },
-  "11-12": { inicio: "16:05", fin: "17:25" },
-  "13-14": { inicio: "17:30", fin: "18:50" },
-  "15-16": { inicio: "18:55", fin: "20:15" },
+  "1-2":   { inicio: "08:15", fin: "09:25" },
+  "3-4":   { inicio: "09:40", fin: "10:50" },
+  "5-6":   { inicio: "11:05", fin: "12:15" },
+  "7-8":   { inicio: "12:30", fin: "13:40" },
+  "9-10":  { inicio: "14:40", fin: "15:50" },
+  "11-12": { inicio: "16:05", fin: "17:15" },
+  "13-14": { inicio: "17:30", fin: "18:40" },
+  "15-16": { inicio: "18:55", fin: "20:05" },
 };
 
 // Issue #15: Horarios límite centralizados (antes hardcodeados en procesar-ausencias)
