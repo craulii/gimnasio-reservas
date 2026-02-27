@@ -58,14 +58,18 @@ Los tests son estaticos - verifican codigo fuente sin necesitar BD ni servidor.
 - **Llamadas internas:** No usar HTTP fetch entre endpoints (falla auth). Usar funciones directas a BD
 - **UI cupos alumno:** Tarjetas con horario real (HORARIOS_BLOQUE), barra de progreso con color dinamico, bloques expirados deshabilitados
 - **Ordenamiento bloques:** Siempre usar `sortBloques`/`sortByBloque` de constants.js (NUNCA `.sort()` string que ordena "11-12" antes que "3-4")
+- **Bloques horarios:** Los 8 bloques son de clase (`1-2, 3-4, 5-6...`), NO horas del reloj (`7-8, 8-9...`). `BLOQUES_HORARIOS` en constants.js es la unica fuente de verdad — usarla siempre en vez de definir listas locales. Debe coincidir con las keys de `HORARIOS_BLOQUE`, `HORARIOS_LIMITE` y `HORARIOS_CIERRE`.
 
 ## Cupos diarios - Generacion automatica
 Los cupos se generan con doble seguridad:
 1. **Cron Vercel** (`vercel.json`): `0 4 * * *` (4 AM UTC) llama GET `/api/admin/mantenimiento` que genera cupos + sincroniza contadores + limpieza semanal (lunes)
 2. **Fallback en GET `/api/cupos`**: Si se piden cupos de hoy y no existen, los genera automaticamente (por si el cron falla)
 
+Ambos usan `BLOQUES_HORARIOS` de `constants.js` como unica fuente de verdad para los nombres de bloque.
+
 El endpoint GET `/api/admin/mantenimiento` esta whitelisteado en `middleware.js` (no requiere auth).
 
+Bloques: `1-2, 3-4, 5-6, 7-8, 9-10, 11-12, 13-14, 15-16` (8 bloques de clase, NO horas del reloj).
 Cupos por sede: Vitacura = 13, San Joaquin = 17.
 
 ## Panel Admin - Tabs
@@ -105,6 +109,12 @@ git checkout vercel-supabase  # Branch PostgreSQL/Vercel
 ```
 
 ## Historial de sesiones
+
+### Sesion 27-feb-2026
+Commits: `4878ba6`
+1. **Fix BLOQUES_HORARIOS** - Corregido de bloques por hora (`"7-8","8-9","9-10"...`) a bloques de clase (`"1-2","3-4","5-6"...`). Esto causaba que el fallback de auto-generacion en GET /api/cupos creara cupos con nombres incorrectos y que el procesamiento de ausencias no matcheara nada en la DB.
+2. **Single source of truth** - Eliminado `BLOQUES_DEFAULT` duplicado en mantenimiento/route.js, ahora importa `BLOQUES_HORARIOS` de constants.js. Ambos generadores (cron y fallback) usan la misma constante.
+3. **Limpieza de datos en Supabase** - Borrados cupos de hoy (2026-02-27) con bloques incorrectos y regenerados con los 8 bloques correctos. Movida reserva de bloque fantasma "17-18" a "15-16". Eliminados todos los cupos "17-18" historicos.
 
 ### Sesion 26-feb-2026 (tarde)
 Commits: `657c986`
