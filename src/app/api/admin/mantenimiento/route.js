@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-import { getFechaChile } from "@/app/utils/constants";
-
-// Configuración de bloques y sedes
-const BLOQUES_DEFAULT = [
-  { bloque: "1-2", cupos: 15 },
-  { bloque: "3-4", cupos: 15 },
-  { bloque: "5-6", cupos: 15 },
-  { bloque: "7-8", cupos: 15 },
-  { bloque: "9-10", cupos: 15 },
-  { bloque: "11-12", cupos: 15 },
-  { bloque: "13-14", cupos: 15 },
-  { bloque: "15-16", cupos: 15 },
-];
+import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -41,10 +29,10 @@ async function generarCuposDelDia(connection) {
 
   for (const sede of SEDES_DEFAULT) {
     const cuposSede = CUPOS_POR_SEDE[sede] || 15;
-    for (const config of BLOQUES_DEFAULT) {
+    for (const bloque of BLOQUES_HORARIOS) {
       await connection.execute(
         "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
-        [config.bloque, sede, cuposSede, fechaChile]
+        [bloque, sede, cuposSede, fechaChile]
       );
     }
   }
