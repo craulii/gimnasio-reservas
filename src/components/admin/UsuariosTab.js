@@ -93,7 +93,7 @@ export default function UsuariosTab({ setMessage }) {
               placeholder="Nombre o email..."
               value={busquedaUsuarios}
               onChange={(e) => setBusquedaUsuarios(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -103,7 +103,7 @@ export default function UsuariosTab({ setMessage }) {
             <select
               value={tipoUsuarios}
               onChange={(e) => setTipoUsuarios(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="todos">Todos los usuarios</option>
               <option value="alumnos">Solo alumnos</option>

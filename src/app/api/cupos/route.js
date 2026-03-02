@@ -9,25 +9,33 @@ const CUPOS_POR_SEDE = {
 };
 const SEDES = ['Vitacura', 'San Joaquín'];
 
-// Fallback: genera cupos del dia si el cron no corrio
+// Fallback: genera cupos de la semana si el cron no corrio
 async function autoGenerarCupos(fecha) {
-  const [existentes] = await pool.execute(
-    "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
-    [fecha]
-  );
-  if (existentes[0].count > 0) return;
+  const fechaBase = new Date(fecha + 'T12:00:00');
 
-  console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fecha);
-  for (const sede of SEDES) {
-    const cuposSede = CUPOS_POR_SEDE[sede];
-    for (const bloque of BLOQUES_HORARIOS) {
-      await pool.execute(
-        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
-        [bloque, sede, cuposSede, fecha]
-      );
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(fechaBase);
+    d.setDate(d.getDate() + i);
+    const fechaStr = d.toISOString().split('T')[0];
+
+    const [existentes] = await pool.execute(
+      "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
+      [fechaStr]
+    );
+    if (existentes[0].count > 0) continue;
+
+    console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fechaStr);
+    for (const sede of SEDES) {
+      const cuposSede = CUPOS_POR_SEDE[sede];
+      for (const bloque of BLOQUES_HORARIOS) {
+        await pool.execute(
+          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+          [bloque, sede, cuposSede, fechaStr]
+        );
+      }
     }
   }
-  console.log("[AUTO-CUPOS] Cupos generados exitosamente");
+  console.log("[AUTO-CUPOS] Cupos semanales verificados/generados");
 }
 
 // --- GET: OBTENER CUPOS (Público/Privado) ---

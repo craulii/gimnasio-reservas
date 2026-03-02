@@ -58,16 +58,16 @@ export default function EstadisticasTab({ cupos = {}, setMessage }) {
               type="date" 
               value={fechaInicio}
               onChange={(e) => setFechaInicio(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-gray-600 font-medium text-sm">Hasta:</span>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={fechaFin}
               onChange={(e) => setFechaFin(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none"
             />
           </div>
           <span className="text-xs text-gray-500 italic ml-auto">

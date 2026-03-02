@@ -68,7 +68,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               type="text"
               value={formUsuario.name}
               onChange={(e) => setFormUsuario({ ...formUsuario, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -80,7 +80,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               type="email"
               value={formUsuario.newEmail}
               onChange={(e) => setFormUsuario({ ...formUsuario, newEmail: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -93,7 +93,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               value={formUsuario.password}
               onChange={(e) => setFormUsuario({ ...formUsuario, password: e.target.value })}
               placeholder="Nueva contraseña..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -119,7 +119,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               value={formUsuario.rut}
               onChange={(e) => setFormUsuario({ ...formUsuario, rut: e.target.value })}
               placeholder="12.345.678-9"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -132,7 +132,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               value={formUsuario.rol}
               onChange={(e) => setFormUsuario({ ...formUsuario, rol: e.target.value })}
               placeholder="Ej: Alumno, Funcionario..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
@@ -145,7 +145,7 @@ export default function ModalEditarUsuario({ usuario, onClose, onSave, setMessag
               min="0"
               value={formUsuario.faltas}
               onChange={(e) => setFormUsuario({ ...formUsuario, faltas: parseInt(e.target.value) || 0 })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <p className="text-xs text-gray-500 mt-1">3 faltas = baneo automatico</p>
           </div>

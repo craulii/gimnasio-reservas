@@ -1,6 +1,32 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile } from "@/app/utils/constants";
+import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
+
+const CUPOS_POR_SEDE_DEFAULT = {
+  'Vitacura': 13,
+  'San Joaquín': 17,
+};
+const SEDES = ['Vitacura', 'San Joaquín'];
+
+// Genera cupos para una fecha si no existen (para dias futuros)
+async function asegurarCuposFecha(fecha) {
+  const [existentes] = await pool.execute(
+    "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
+    [fecha]
+  );
+  if (existentes[0].count > 0) return;
+
+  for (const sede of SEDES) {
+    const cuposSede = CUPOS_POR_SEDE_DEFAULT[sede];
+    for (const bloque of BLOQUES_HORARIOS) {
+      await pool.execute(
+        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+        [bloque, sede, cuposSede, fecha]
+      );
+    }
+  }
+  console.log(`[BOTÓN PÁNICO] Cupos generados para fecha futura: ${fecha}`);
+}
 
 // --- MÉTODO POST: ACTIVAR PÁNICO (Bloquear horarios) ---
 export async function POST(request) {
@@ -185,6 +211,9 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const fecha = searchParams.get("fecha") || getFechaChile();
+
+    // Generar cupos si no existen para esa fecha (dias futuros)
+    await asegurarCuposFecha(fecha);
 
     const [rows] = await pool.execute(
       `SELECT bloque, sede, total, reservados, fecha

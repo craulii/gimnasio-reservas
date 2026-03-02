@@ -16,27 +16,61 @@ const BLOQUES = [
 
 const SEDES = ["Vitacura", "San Joaquín"];
 
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+function getHoyStr() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+}
+
+function getMaxFechaStr() {
+  const hoy = new Date(getHoyStr() + 'T12:00:00');
+  hoy.setDate(hoy.getDate() + 6);
+  return hoy.toISOString().split('T')[0];
+}
+
+function getMañanaStr() {
+  const m = new Date(getHoyStr() + 'T12:00:00');
+  m.setDate(m.getDate() + 1);
+  return m.toISOString().split('T')[0];
+}
+
+function getNombreDia(fechaStr) {
+  const d = new Date(fechaStr + 'T12:00:00');
+  return DIAS_SEMANA[d.getDay()];
+}
+
 export default function BotonPanicoTab() {
   const [seleccionados, setSeleccionados] = useState([]);
   const [mensaje, setMensaje] = useState("");
   const [loading, setLoading] = useState(false);
   const [estadoActual, setEstadoActual] = useState([]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(getHoyStr());
 
   useEffect(() => {
-    cargarEstado();
-  }, []);
+    cargarEstado(fechaSeleccionada);
+  }, [fechaSeleccionada]);
 
-  const cargarEstado = async () => {
+  const cargarEstado = async (fecha) => {
     try {
-      // ✅ CORRECCIÓN: Usamos ApiService en lugar de fetch directo
-      const fechaHoy = new Date().toISOString().split('T')[0];
-      const { ok, data } = await ApiService.getEstadoBloques(fechaHoy);
-      
+      const { ok, data } = await ApiService.getEstadoBloques(fecha);
+
       if (ok) {
         setEstadoActual(data.cupos || []);
       }
     } catch (error) {
       console.error("Error cargando estado:", error);
+    }
+  };
+
+  const cambiarFecha = (delta) => {
+    const actual = new Date(fechaSeleccionada + 'T12:00:00');
+    actual.setDate(actual.getDate() + delta);
+    const nueva = actual.toISOString().split('T')[0];
+    const hoy = getHoyStr();
+    const max = getMaxFechaStr();
+    if (nueva >= hoy && nueva <= max) {
+      setFechaSeleccionada(nueva);
+      setSeleccionados([]);
     }
   };
 
@@ -72,7 +106,7 @@ export default function BotonPanicoTab() {
     }
 
     const confirmacion = window.confirm(
-      `¿Restablecer ${seleccionados.length} bloque(s) a su capacidad normal?\n\nLos cupos volverán a su valor por defecto según la sede.`
+      `¿Restablecer ${seleccionados.length} bloque(s) a su capacidad normal para ${getNombreDia(fechaSeleccionada)} ${fechaSeleccionada}?\n\nLos cupos volverán a su valor por defecto según la sede.`
     );
 
     if (!confirmacion) return;
@@ -81,8 +115,7 @@ export default function BotonPanicoTab() {
     setMensaje("Procesando...");
 
     try {
-      const fecha = new Date().toISOString().split('T')[0];
-      const { ok, data } = await ApiService.restablecerBloques(seleccionados, fecha);
+      const { ok, data } = await ApiService.restablecerBloques(seleccionados, fechaSeleccionada);
 
       if (ok) {
         setMensaje(
@@ -90,7 +123,7 @@ export default function BotonPanicoTab() {
           `📊 Bloques restablecidos: ${data.bloquesRestaurados}`
         );
         setSeleccionados([]);
-        await cargarEstado();
+        await cargarEstado(fechaSeleccionada);
       } else {
         const errorMsg = data?.message || data?.error || "Error al restablecer bloques";
         setMensaje(`❌ Error: ${errorMsg}`);
@@ -110,7 +143,7 @@ export default function BotonPanicoTab() {
     }
 
     const confirmacion = window.confirm(
-      `🚨 ¿ESTÁS SEGURO?\n\nSe desactivarán ${seleccionados.length} bloques y se cancelarán todas las reservas existentes.\n\nEsta acción NO se puede deshacer.`
+      `🚨 ¿ESTÁS SEGURO?\n\nSe desactivarán ${seleccionados.length} bloques para ${getNombreDia(fechaSeleccionada)} ${fechaSeleccionada} y se cancelarán todas las reservas existentes.\n\nEsta acción NO se puede deshacer.`
     );
 
     if (!confirmacion) return;
@@ -119,10 +152,7 @@ export default function BotonPanicoTab() {
     setMensaje("Procesando...");
 
     try {
-      const fecha = new Date().toISOString().split('T')[0];
-      
-      // ✅ CORRECCIÓN: Usamos ApiService para enviar la petición con cookies
-      const { ok, data } = await ApiService.activarBotonPanico(seleccionados, fecha);
+      const { ok, data } = await ApiService.activarBotonPanico(seleccionados, fechaSeleccionada);
 
       if (ok) {
         setMensaje(
@@ -131,7 +161,7 @@ export default function BotonPanicoTab() {
           `🚫 Reservas canceladas: ${data.reservasCanceladas}`
         );
         setSeleccionados([]);
-        await cargarEstado();
+        await cargarEstado(fechaSeleccionada);
       } else {
         const errorMsg = data?.message || data?.error || "Error al activar botón de pánico";
         setMensaje(`❌ Error: ${errorMsg}`);
@@ -167,6 +197,73 @@ export default function BotonPanicoTab() {
           Esta función <strong>desactivará completamente</strong> los bloques seleccionados y <strong>cancelará todas las reservas existentes</strong>. 
           Ningún alumno podrá reservar en esos horarios.
         </p>
+      </div>
+
+      {/* Selector de fecha */}
+      <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm font-medium text-gray-700">Fecha:</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => cambiarFecha(-1)}
+              disabled={fechaSeleccionada <= getHoyStr()}
+              className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              &larr;
+            </button>
+            <input
+              type="date"
+              value={fechaSeleccionada}
+              min={getHoyStr()}
+              max={getMaxFechaStr()}
+              onChange={(e) => {
+                setFechaSeleccionada(e.target.value);
+                setSeleccionados([]);
+              }}
+              className="border border-gray-300 rounded px-2 py-1 text-gray-800 focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+            <button
+              onClick={() => cambiarFecha(1)}
+              disabled={fechaSeleccionada >= getMaxFechaStr()}
+              className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
+            >
+              &rarr;
+            </button>
+          </div>
+          <span className="text-sm font-semibold text-indigo-700">
+            {getNombreDia(fechaSeleccionada)}
+          </span>
+          <div className="flex gap-2 ml-auto">
+            <button
+              onClick={() => { setFechaSeleccionada(getHoyStr()); setSeleccionados([]); }}
+              className={`px-3 py-1 text-sm rounded transition ${
+                fechaSeleccionada === getHoyStr()
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Hoy
+            </button>
+            <button
+              onClick={() => {
+                setFechaSeleccionada(getMañanaStr());
+                setSeleccionados([]);
+              }}
+              className={`px-3 py-1 text-sm rounded transition ${
+                fechaSeleccionada === getMañanaStr()
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Mañana
+            </button>
+          </div>
+        </div>
+        {fechaSeleccionada !== getHoyStr() && (
+          <p className="text-xs text-amber-600 mt-2 font-medium">
+            Estás viendo un día futuro. Los cambios afectarán los cupos de {getNombreDia(fechaSeleccionada)} {fechaSeleccionada}.
+          </p>
+        )}
       </div>
 
       {/* Mensaje de estado */}

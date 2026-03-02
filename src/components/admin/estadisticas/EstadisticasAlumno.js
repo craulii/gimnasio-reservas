@@ -72,7 +72,7 @@ export default function EstadisticasAlumno({ fechaInicio, fechaFin, setMessage, 
             value={emailAlumno}
             onChange={(e) => setEmailAlumno(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && cargarEstadisticasAlumno()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div className="flex items-end space-x-2">

@@ -12,32 +12,39 @@ const SEDES_DEFAULT = ['Vitacura', 'San Joaquín'];
 
 // --- FUNCIONES AUXILIARES ---
 
-async function generarCuposDelDia(connection) {
-  const fechaChile = getFechaChile();
+async function generarCuposSemana(connection) {
+  const fechaBase = new Date(getFechaChile() + 'T12:00:00');
+  let diasGenerados = 0;
 
-  const [existentes] = await connection.execute(
-    "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
-    [fechaChile]
-  );
+  for (let i = 0; i < 7; i++) {
+    const fecha = new Date(fechaBase);
+    fecha.setDate(fecha.getDate() + i);
+    const fechaStr = fecha.toISOString().split('T')[0];
 
-  if (existentes[0].count > 0) {
-    console.log("Cupos de hoy ya existen, saltando generación.");
-    return;
-  }
+    const [existentes] = await connection.execute(
+      "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
+      [fechaStr]
+    );
 
-  console.log("Generando cupos para:", fechaChile);
-
-  for (const sede of SEDES_DEFAULT) {
-    const cuposSede = CUPOS_POR_SEDE[sede] || 15;
-    for (const bloque of BLOQUES_HORARIOS) {
-      await connection.execute(
-        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
-        [bloque, sede, cuposSede, fechaChile]
-      );
+    if (existentes[0].count > 0) {
+      continue;
     }
+
+    console.log("Generando cupos para:", fechaStr);
+
+    for (const sede of SEDES_DEFAULT) {
+      const cuposSede = CUPOS_POR_SEDE[sede] || 15;
+      for (const bloque of BLOQUES_HORARIOS) {
+        await connection.execute(
+          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+          [bloque, sede, cuposSede, fechaStr]
+        );
+      }
+    }
+    diasGenerados++;
   }
 
-  console.log(`Cupos generados para ${SEDES_DEFAULT.length} sedes.`);
+  console.log(`Cupos generados para ${diasGenerados} día(s) nuevos (7 días adelante).`);
 }
 
 async function sincronizarContadores(connection) {
@@ -106,8 +113,8 @@ export async function GET(request) {
 
     connection = await pool.getConnection();
 
-    // 1. Generar
-    await generarCuposDelDia(connection);
+    // 1. Generar cupos para la semana (hoy + 6 días)
+    await generarCuposSemana(connection);
 
     // 2. Sincronizar
     await sincronizarContadores(connection);
