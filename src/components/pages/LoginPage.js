@@ -70,12 +70,22 @@ export default function LoginPage({ setUser, message, setMessage }) {
           {message && (
             <div className={`mt-4 p-3 rounded-lg text-center text-sm font-medium border animate-pulse ${
               message.includes("✅") || message.includes("Bienvenido") || message.includes("exito")
-                ? "bg-green-100 text-green-800 border-green-300" 
+                ? "bg-green-100 text-green-800 border-green-300"
                 : "bg-red-100 text-red-800 border-red-300"
             }`}>
               {message}
             </div>
           )}
+
+          {/* Link a Reglas y FAQ */}
+          <div className="text-center">
+            <a
+              href="/reglas"
+              className="text-sm font-medium text-yellow-900 underline hover:text-white transition-colors"
+            >
+              Reglas del gimnasio y preguntas frecuentes
+            </a>
+          </div>
         </div>
       </div>
     </div>

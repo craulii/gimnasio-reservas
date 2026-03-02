@@ -56,14 +56,22 @@ export default function DashboardAlumno({ user, message, setMessage, onLogout })
                 {/* Visualizador de Faltas */}
                 {user.faltas > 0 && (
                   <div className={`mt-3 p-2 rounded font-bold text-center border ${
-                    user.faltas >= 2 
-                      ? 'bg-red-100 text-red-800 border-red-300' 
+                    user.faltas >= 2
+                      ? 'bg-red-100 text-red-800 border-red-300'
                       : 'bg-orange-100 text-orange-800 border-orange-300'
                   }`}>
                     {user.faltas >= 2 ? '🚨' : '⚠️'} Tienes {user.faltas} falta{user.faltas > 1 ? 's' : ''} acumulada{user.faltas > 1 ? 's' : ''}
                     {user.faltas >= 2 && <span className="block text-xs font-normal mt-1">¡Cuidado! Una más y serás baneado.</span>}
                   </div>
                 )}
+
+                {/* Link a reglas completas */}
+                <a
+                  href="/reglas"
+                  className="block mt-3 text-center text-sm font-medium text-yellow-900 underline hover:text-yellow-700 transition-colors"
+                >
+                  Ver todas las reglas y preguntas frecuentes →
+                </a>
               </div>
             </div>
           </div>
