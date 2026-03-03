@@ -85,7 +85,7 @@ export default function UsuariosTab({ setMessage }) {
       <div className="bg-gray-100 p-4 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
               Buscar usuario
             </label>
             <input
@@ -97,7 +97,7 @@ export default function UsuariosTab({ setMessage }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">
               Tipo de usuario
             </label>
             <select
@@ -165,12 +165,12 @@ export default function UsuariosTab({ setMessage }) {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 truncate">{usuario.email}</p>
+                      <p className="text-sm text-gray-600 truncate">{usuario.email}</p>
                       
                       {/* Estadísticas en línea */}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-400 mt-1">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 mt-1">
                          <span>Rol: {usuario.rol || "N/A"}</span>
-                         <span className="text-gray-300">|</span>
+                         <span className="text-gray-400">|</span>
                          <span>{usuario.total_reservas || 0} reservas</span>
                          <span>{usuario.total_asistencias || 0} asistencias</span>
                          {usuario.total_reservas > 0 && (
