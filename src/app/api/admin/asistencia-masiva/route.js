@@ -63,13 +63,22 @@ export async function POST(request) {
         }
       }
 
-      // Caso 2: Era 0 (ausente) y ahora es 1 (presente) -> RESTAR FALTA (Corregir error)
-      else if (asistioAnterior === 0 && asistio) {
+      // Caso 2: Era 0 o 2 (ausente manual o auto-procesada) y ahora es 1 (presente) -> RESTAR FALTA
+      else if ((asistioAnterior === 0 || asistioAnterior === 2) && asistio) {
         await connection.query(
           "UPDATE users SET faltas = GREATEST(faltas - 1, 0) WHERE email = ?",
           [email]
         );
-        console.log(`[FALTA CORREGIDA] ${email}`);
+        console.log(`[FALTA CORREGIDA] ${email} (era asistio=${asistioAnterior})`);
+
+        // Si fue auto-procesada, el cupo fue liberado -> re-incrementar reservados
+        if (asistioAnterior === 2) {
+          await connection.query(
+            "UPDATE cupos SET reservados = LEAST(reservados + 1, total) WHERE bloque = ? AND sede = ? AND fecha = ?",
+            [bloque_horario, sede, fecha]
+          );
+          console.log(`[CUPO RESTAURADO] ${bloque_horario} ${sede} ${fecha}`);
+        }
 
         // Desbanear si baja de 3 faltas
         const [userRow] = await connection.query("SELECT faltas FROM users WHERE email = ?", [email]);
