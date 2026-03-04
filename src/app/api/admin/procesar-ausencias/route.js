@@ -80,9 +80,9 @@ export async function POST(request) {
           [reserva.id]
         );
 
-        // B. Incrementar faltas del usuario
+        // B. Incrementar faltas del usuario (máximo 3)
         await connection.execute(
-          "UPDATE users SET faltas = faltas + 1 WHERE email = ?",
+          "UPDATE users SET faltas = LEAST(faltas + 1, 3) WHERE email = ?",
           [reserva.email]
         );
 

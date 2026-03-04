@@ -18,6 +18,10 @@ async function autoGenerarCupos(fecha) {
     d.setDate(d.getDate() + i);
     const fechaStr = d.toISOString().split('T')[0];
 
+    // No generar cupos para fines de semana
+    const diaSemana = d.getDay();
+    if (diaSemana === 0 || diaSemana === 6) continue;
+
     const [existentes] = await pool.execute(
       "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
       [fechaStr]
@@ -47,7 +51,11 @@ export async function GET(request) {
     const hoy = getFechaChile();
 
     // Fallback: si piden cupos de hoy y no existen, generarlos
-    if (fecha === hoy) {
+    // No generar ni procesar en fines de semana
+    const hoyDate = new Date(hoy + 'T12:00:00');
+    const esFinDeSemana = hoyDate.getDay() === 0 || hoyDate.getDay() === 6;
+
+    if (fecha === hoy && !esFinDeSemana) {
       await autoGenerarCupos(fecha);
 
       // Auto-procesar ausencias (15 min después de inicio) para liberar cupos

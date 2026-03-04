@@ -50,7 +50,7 @@ export async function POST(request) {
       // Caso 1: Era NULL o 1 (presente/pendiente) y ahora es 0 (ausente) -> SUMAR FALTA
       if ((asistioAnterior === null || asistioAnterior === 1) && !asistio) {
         await connection.query(
-          "UPDATE users SET faltas = faltas + 1 WHERE email = ?",
+          "UPDATE users SET faltas = LEAST(faltas + 1, 3) WHERE email = ?",
           [email]
         );
         console.log(`[FALTA AGREGADA] ${email}`);

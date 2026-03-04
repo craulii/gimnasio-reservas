@@ -1,18 +1,70 @@
 "use client";
+import { useState, useEffect } from "react";
 import { FiLogOut } from "react-icons/fi";
 // Ajusta la ruta si es necesario. Si está en la misma carpeta 'components', usa ./alumno
-import ReservarCupo from "@/components/alumno/ReservarCupo"; 
+import ReservarCupo from "@/components/alumno/ReservarCupo";
 import useCupos from "@/hooks/useCupos";
 
 export default function DashboardAlumno({ user, message, setMessage, onLogout }) {
   // El hook usa la nueva API con cookies automáticamente
   const { cupos, loading, fetchCupos } = useCupos(user);
 
+  // Modal obligatorio: reservas son solo para hoy (1 vez por sesión)
+  const [mostrarModal, setMostrarModal] = useState(false);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem("modal_reservas_hoy_visto")) {
+      setMostrarModal(true);
+    }
+  }, []);
+
+  const cerrarModal = () => {
+    sessionStorage.setItem("modal_reservas_hoy_visto", "1");
+    setMostrarModal(false);
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-amber-100 bg-[url('/gym-bg.jpg')] bg-cover bg-center">
+
+      {/* Modal obligatorio: reservas son solo para hoy */}
+      {mostrarModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 p-6 space-y-4">
+            <div className="text-center">
+              <span className="text-4xl block mb-2">⚠️</span>
+              <h2 className="text-xl font-extrabold text-red-700">
+                LAS RESERVAS SON SOLO PARA EL DIA DE HOY
+              </h2>
+            </div>
+            <div className="text-sm text-gray-700 space-y-2">
+              <p>
+                Cada reserva que hagas es <strong>unicamente para el dia de hoy</strong>.
+                No se puede reservar para dias futuros.
+              </p>
+              <p>
+                Si no puedes asistir, <strong>cancela tu reserva</strong> para evitar una falta.
+                Con <strong>3 faltas</strong> quedaras baneado por 6 meses.
+              </p>
+            </div>
+            <a
+              href="/reglas"
+              className="block text-center text-sm text-indigo-600 underline hover:text-indigo-800"
+            >
+              Ver todas las reglas y preguntas frecuentes
+            </a>
+            <button
+              onClick={cerrarModal}
+              className="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              ENTENDIDO
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-md bg-stone-400/90 bg-opacity-90 rounded-xl shadow-2xl border-2 border-yellow-800 p-8">
         <div className="space-y-6">
-          
+
           {/* Header del Usuario */}
           <div className="flex justify-between items-center">
             <div>

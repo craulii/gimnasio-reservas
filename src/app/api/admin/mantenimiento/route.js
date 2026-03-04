@@ -21,6 +21,10 @@ async function generarCuposSemana(connection) {
     fecha.setDate(fecha.getDate() + i);
     const fechaStr = fecha.toISOString().split('T')[0];
 
+    // No generar cupos para fines de semana
+    const diaSemana = fecha.getDay();
+    if (diaSemana === 0 || diaSemana === 6) continue;
+
     const [existentes] = await connection.execute(
       "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
       [fechaStr]

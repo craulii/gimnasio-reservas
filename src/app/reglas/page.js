@@ -41,6 +41,7 @@ export default function ReglasPage() {
               <span>📋</span> Reservas y asistencia
             </h3>
             <ul className="text-sm text-gray-800 space-y-1 ml-6 list-disc">
+              <li>Las reservas son <strong>solo para el mismo dia</strong> (no se puede reservar para otro dia)</li>
               <li>Solo puedes realizar <strong>1 reserva por dia</strong></li>
               <li>Debes esperar al inicio del bloque para ingresar al gimnasio</li>
               <li>Respeta los horarios de tu bloque reservado</li>

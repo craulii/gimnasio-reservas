@@ -34,7 +34,7 @@ export async function procesarAusenciasDirecto(bloque, sede, fecha) {
         await connection.beginTransaction();
         try {
           await connection.execute("UPDATE reservas SET asistio = 2 WHERE id = ?", [reserva.id]);
-          await connection.execute("UPDATE users SET faltas = faltas + 1 WHERE email = ?", [reserva.email]);
+          await connection.execute("UPDATE users SET faltas = LEAST(faltas + 1, 3) WHERE email = ?", [reserva.email]);
 
           const [user] = await connection.execute("SELECT faltas FROM users WHERE email = ? LIMIT 1", [reserva.email]);
           if (user[0]?.faltas >= 3) {

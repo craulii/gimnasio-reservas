@@ -104,6 +104,9 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
     return misReservas.some(r => r.bloque_horario === bloque && r.sede === sede);
   };
 
+  // Verificar si el alumno ya tiene alguna reserva hoy
+  const tieneReservaHoy = misReservas.length > 0;
+
   // Verificar si un bloque ya expiro (25 min despues de inicio)
   const bloqueExpirado = (bloque) => {
     const limite = HORARIOS_CIERRE[bloque];
@@ -204,17 +207,17 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
                     </button>
                   ) : (
                     <button
-                      disabled={disponibles <= 0 || expirado}
+                      disabled={disponibles <= 0 || expirado || tieneReservaHoy}
                       onClick={() => hacerReserva(info.bloque, info.sede)}
                       className={`px-4 py-2 rounded-lg text-white font-medium ${
-                        expirado
+                        expirado || tieneReservaHoy
                           ? "bg-gray-400 cursor-not-allowed"
                           : disponibles > 0
                             ? "bg-indigo-600 hover:bg-indigo-700"
                             : "bg-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      {expirado ? "Bloque cerrado" : disponibles <= 0 ? "Sin cupos" : "Reservar"}
+                      {tieneReservaHoy ? "Ya reservaste hoy" : expirado ? "Bloque cerrado" : disponibles <= 0 ? "Sin cupos" : "Reservar"}
                     </button>
                   )}
                 </div>
