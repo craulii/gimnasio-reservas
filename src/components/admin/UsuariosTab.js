@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 // Asegúrate de la ruta correcta
 import ApiService from "../../services/api";
 import ModalEditarUsuario from "./ModalEditarUsuario";
+import { HORARIOS_BLOQUE } from "../../app/utils/constants";
 
 export default function UsuariosTab({ setMessage }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -11,6 +12,8 @@ export default function UsuariosTab({ setMessage }) {
   const [loading, setLoading] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [modalUsuario, setModalUsuario] = useState(false);
+  const [faltasUsuario, setFaltasUsuario] = useState(null); // {email, name, faltas: []}
+  const [loadingFaltas, setLoadingFaltas] = useState(false);
 
   useEffect(() => {
     cargarUsuarios();
@@ -71,6 +74,37 @@ export default function UsuariosTab({ setMessage }) {
       }
     } catch (error) {
       setMessage("Error de conexión");
+    }
+  };
+
+  const verFaltas = async (usuario) => {
+    setLoadingFaltas(true);
+    setFaltasUsuario({ email: usuario.email, name: usuario.name, faltas: [] });
+    try {
+      const { ok, data } = await ApiService.getEstadisticasAlumno(usuario.email);
+      if (ok && data.diasFaltados) {
+        setFaltasUsuario({ email: usuario.email, name: usuario.name, faltas: data.diasFaltados });
+      }
+    } catch {
+      setMessage("Error cargando faltas del usuario");
+    } finally {
+      setLoadingFaltas(false);
+    }
+  };
+
+  const borrarFaltaIndividual = async (email, reservaId) => {
+    if (!confirm("¿Eliminar esta falta? Se marcará como presente y se reducirá el contador.")) return;
+    try {
+      const { ok, data } = await ApiService.borrarFalta(email, reservaId);
+      if (ok) {
+        setMessage(data?.message || "Falta eliminada");
+        await verFaltas({ email, name: faltasUsuario?.name });
+        await cargarUsuarios();
+      } else {
+        setMessage(String(data?.error || "Error al eliminar falta"));
+      }
+    } catch {
+      setMessage("Error de conexion al eliminar falta");
     }
   };
 
@@ -202,6 +236,14 @@ export default function UsuariosTab({ setMessage }) {
                       </button>
                     )}
                     
+                    {usuario.faltas > 0 && (
+                      <button
+                        onClick={() => verFaltas(usuario)}
+                        className="px-3 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 transition-colors text-sm"
+                      >
+                        Ver faltas
+                      </button>
+                    )}
                     <button
                       onClick={() => abrirEditarUsuario(usuario)}
                       className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
@@ -230,6 +272,60 @@ export default function UsuariosTab({ setMessage }) {
           <p className="text-gray-500">
             Intenta ajustar los filtros de búsqueda.
           </p>
+        </div>
+      )}
+
+      {/* Panel de Faltas */}
+      {faltasUsuario && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Faltas de {faltasUsuario.name}</h3>
+                <p className="text-sm text-gray-500">{faltasUsuario.email}</p>
+              </div>
+              <button
+                onClick={() => setFaltasUsuario(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >&times;</button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingFaltas ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mx-auto"></div>
+                </div>
+              ) : faltasUsuario.faltas.length === 0 ? (
+                <p className="text-gray-500 text-center py-4">No hay faltas registradas</p>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {faltasUsuario.faltas.map((falta) => {
+                    const horario = HORARIOS_BLOQUE[falta.bloque_horario];
+                    const fechaStr = typeof falta.fecha === 'string' && falta.fecha.includes('T')
+                      ? falta.fecha.split('T')[0]
+                      : falta.fecha;
+                    return (
+                      <div key={falta.id} className="py-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {fechaStr} - {horario ? `${horario.inicio} - ${horario.fin}` : `Bloque ${falta.bloque_horario}`}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {falta.sede} - {falta.asistio === 2 ? "Ausencia automatica" : "Marcada por profesor"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => borrarFaltaIndividual(faltasUsuario.email, falta.id)}
+                          className="px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-xs font-medium"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

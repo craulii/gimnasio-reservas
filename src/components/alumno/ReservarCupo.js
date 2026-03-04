@@ -9,6 +9,8 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
   const [mostrarRecordatorio, setMostrarRecordatorio] = useState(false);
   const [misReservas, setMisReservas] = useState([]);
   const [horaActual, setHoraActual] = useState(getHoraChile());
+  const [historialFaltas, setHistorialFaltas] = useState([]);
+  const [mostrarFaltas, setMostrarFaltas] = useState(false);
 
   // Obtener las reservas del alumno al cargar
   useEffect(() => {
@@ -29,6 +31,9 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
       const { ok, data } = await ApiService.getMisReservas();
       if (ok && data.reservas) {
         setMisReservas(data.reservas);
+        if (data.historialFaltas) {
+          setHistorialFaltas(data.historialFaltas);
+        }
       }
     } catch (error) {
       console.error("Error obteniendo reservas:", error);
@@ -233,6 +238,56 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Sección Mis Faltas */}
+      {user?.faltas > 0 && (
+        <div className="mt-4 bg-white rounded-lg shadow-sm overflow-hidden">
+          <button
+            onClick={() => setMostrarFaltas(!mostrarFaltas)}
+            className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition"
+          >
+            <span className="text-sm font-medium text-orange-700">
+              Mis faltas ({user.faltas})
+            </span>
+            <span className="text-gray-400 text-xs">
+              {mostrarFaltas ? "Ocultar" : "Ver detalle"}
+            </span>
+          </button>
+          {mostrarFaltas && (
+            <div className="px-4 pb-4 border-t border-gray-100">
+              {historialFaltas.length === 0 ? (
+                <p className="text-sm text-gray-500 py-3">No tienes faltas registradas</p>
+              ) : (
+                <>
+                  <div className="divide-y divide-gray-100">
+                    {historialFaltas.map((falta) => {
+                      const horario = HORARIOS_BLOQUE[falta.bloque_horario];
+                      const fechaStr = typeof falta.fecha === 'string' && falta.fecha.includes('T')
+                        ? falta.fecha.split('T')[0]
+                        : falta.fecha;
+                      return (
+                        <div key={falta.id} className="py-2 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm text-gray-800">
+                              {fechaStr} - {horario ? `${horario.inicio} - ${horario.fin}` : `Bloque ${falta.bloque_horario}`}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {falta.sede} - {falta.asistio === 2 ? "Ausencia automatica" : "Marcada por profesor"}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-3">
+                    Si crees que hay un error, habla con el profesor o administrador.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

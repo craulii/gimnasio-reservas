@@ -167,6 +167,81 @@ export async function PUT(request) {
   }
 }
 
+// --- PATCH: BORRAR FALTA INDIVIDUAL ---
+export async function PATCH(request) {
+  let connection;
+  try {
+    const userRole = request.headers.get("x-user-type");
+    if (userRole !== 'admin') {
+      return NextResponse.json({ error: "Solo admin" }, { status: 403 });
+    }
+
+    const { email, reservaId } = await request.json();
+    if (!email || !reservaId) {
+      return NextResponse.json({ error: "Email y reservaId son obligatorios" }, { status: 400 });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Verificar que la reserva existe, pertenece al email, y es una falta
+      const [reservaRows] = await connection.execute(
+        "SELECT id, asistio FROM reservas WHERE id = ? AND email = ? LIMIT 1",
+        [reservaId, email]
+      );
+
+      if (reservaRows.length === 0) {
+        await connection.rollback();
+        return NextResponse.json({ error: "Reserva no encontrada para este usuario" }, { status: 404 });
+      }
+
+      const reserva = reservaRows[0];
+      if (reserva.asistio !== 0 && reserva.asistio !== 2) {
+        await connection.rollback();
+        return NextResponse.json({ error: "Esta reserva no es una falta" }, { status: 400 });
+      }
+
+      // Cambiar asistio a 1 (presente)
+      await connection.execute(
+        "UPDATE reservas SET asistio = 1 WHERE id = ?",
+        [reservaId]
+      );
+
+      // Decrementar faltas (mínimo 0) y auto-desbanear si < 3
+      await connection.execute(
+        "UPDATE users SET faltas = GREATEST(faltas - 1, 0), baneado = CASE WHEN GREATEST(faltas - 1, 0) < 3 THEN 0 ELSE baneado END WHERE email = ?",
+        [email]
+      );
+
+      await connection.commit();
+
+      // Obtener usuario actualizado
+      const [updatedUser] = await pool.execute(
+        "SELECT email, name, faltas, baneado FROM users WHERE email = ? LIMIT 1",
+        [email]
+      );
+
+      console.log(`[ADMIN] Falta eliminada: reserva ${reservaId} de ${email}`);
+
+      return NextResponse.json({
+        message: "Falta eliminada correctamente",
+        usuario: updatedUser[0]
+      });
+
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    }
+
+  } catch (error) {
+    console.error("Error eliminando falta:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  } finally {
+    if (connection) connection.release();
+  }
+}
+
 // --- DELETE: ELIMINAR USUARIO ---
 export async function DELETE(request) {
   let connection;

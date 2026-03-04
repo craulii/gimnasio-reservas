@@ -206,6 +206,13 @@ class ApiService {
     });
   }
 
+  static async borrarFalta(email, reservaId) {
+    return await fetchWithAuth('/api/admin/usuarios', {
+      method: "PATCH",
+      body: JSON.stringify({ email, reservaId }),
+    });
+  }
+
   static async desbanearUsuario(email) {
     return await fetchWithAuth('/api/admin/usuarios', {
       method: "PUT",

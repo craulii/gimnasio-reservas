@@ -80,11 +80,11 @@ export async function GET(request) {
       queryParams
     );
 
-    // C. DÍAS FALTADOS
+    // C. DÍAS FALTADOS (incluye manuales y auto-procesadas)
     const [diasFaltados] = await pool.execute(
-      `SELECT fecha, bloque_horario, sede
+      `SELECT id, fecha, bloque_horario, sede, asistio
       FROM reservas
-      WHERE email = ? AND asistio = 0 ${dateCondition}
+      WHERE email = ? AND asistio IN (0, 2) ${dateCondition}
       ORDER BY fecha DESC`,
       queryParams
     );

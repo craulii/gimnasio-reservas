@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import ApiService from "@/services/api";
 import GodModalUsuario from "./GodModalUsuario";
+import { HORARIOS_BLOQUE } from "@/app/utils/constants";
 
 export default function GodUsuarios({ setMessage }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -10,6 +11,8 @@ export default function GodUsuarios({ setMessage }) {
   const [loading, setLoading] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [faltasUsuario, setFaltasUsuario] = useState(null);
+  const [loadingFaltas, setLoadingFaltas] = useState(false);
 
   useEffect(() => {
     cargarUsuarios();
@@ -60,6 +63,37 @@ export default function GodUsuarios({ setMessage }) {
       }
     } catch {
       setMessage("Error de conexion");
+    }
+  };
+
+  const verFaltas = async (usuario) => {
+    setLoadingFaltas(true);
+    setFaltasUsuario({ email: usuario.email, name: usuario.name, faltas: [] });
+    try {
+      const { ok, data } = await ApiService.getEstadisticasAlumno(usuario.email);
+      if (ok && data.diasFaltados) {
+        setFaltasUsuario({ email: usuario.email, name: usuario.name, faltas: data.diasFaltados });
+      }
+    } catch {
+      setMessage("Error cargando faltas del usuario");
+    } finally {
+      setLoadingFaltas(false);
+    }
+  };
+
+  const borrarFaltaIndividual = async (email, reservaId) => {
+    if (!confirm("Eliminar esta falta? Se marcara como presente y se reducira el contador.")) return;
+    try {
+      const { ok, data } = await ApiService.borrarFalta(email, reservaId);
+      if (ok) {
+        setMessage(data?.message || "Falta eliminada");
+        await verFaltas({ email, name: faltasUsuario?.name });
+        await cargarUsuarios();
+      } else {
+        setMessage(String(data?.error || "Error al eliminar falta"));
+      }
+    } catch {
+      setMessage("Error de conexion al eliminar falta");
     }
   };
 
@@ -174,6 +208,14 @@ export default function GodUsuarios({ setMessage }) {
                         Restaurar
                       </button>
                     )}
+                    {u.faltas > 0 && (
+                      <button
+                        onClick={() => verFaltas(u)}
+                        className="px-2.5 py-1 text-xs font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/30 transition-colors"
+                      >
+                        Faltas
+                      </button>
+                    )}
                     <button
                       onClick={() => { setUsuarioEditando(u); setModalOpen(true); }}
                       className="px-2.5 py-1 text-xs font-mono bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg hover:bg-cyan-500/30 transition-colors"
@@ -196,6 +238,60 @@ export default function GodUsuarios({ setMessage }) {
         <div className="text-center py-12 bg-slate-900 border border-slate-800 rounded-xl">
           <p className="text-slate-500 font-mono text-sm">No se encontraron usuarios</p>
           <p className="text-slate-600 text-xs mt-1">Ajusta los filtros de busqueda</p>
+        </div>
+      )}
+
+      {/* Panel de Faltas */}
+      {faltasUsuario && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-mono text-white">Faltas de {faltasUsuario.name}</h3>
+                <p className="text-xs font-mono text-slate-500">{faltasUsuario.email}</p>
+              </div>
+              <button
+                onClick={() => setFaltasUsuario(null)}
+                className="text-slate-500 hover:text-white text-xl leading-none"
+              >&times;</button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {loadingFaltas ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-cyan-400 mx-auto"></div>
+                </div>
+              ) : faltasUsuario.faltas.length === 0 ? (
+                <p className="text-slate-500 text-center py-4 font-mono text-sm">No hay faltas registradas</p>
+              ) : (
+                <div className="divide-y divide-slate-800/50">
+                  {faltasUsuario.faltas.map((falta) => {
+                    const horario = HORARIOS_BLOQUE[falta.bloque_horario];
+                    const fechaStr = typeof falta.fecha === 'string' && falta.fecha.includes('T')
+                      ? falta.fecha.split('T')[0]
+                      : falta.fecha;
+                    return (
+                      <div key={falta.id} className="py-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-white font-mono">
+                            {fechaStr} - {horario ? `${horario.inicio} - ${horario.fin}` : `Bloque ${falta.bloque_horario}`}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-mono">
+                            {falta.sede} - {falta.asistio === 2 ? "Auto-procesada" : "Marcada por profesor"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => borrarFaltaIndividual(faltasUsuario.email, falta.id)}
+                          className="px-2 py-1 text-xs font-mono bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

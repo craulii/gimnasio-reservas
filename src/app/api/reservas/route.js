@@ -192,6 +192,14 @@ export async function GET(request) {
       [user.email, getFechaChile()]
     );
 
+    // Historial de faltas (asistio: 0=manual, 2=auto-procesado)
+    const [historialFaltas] = await pool.execute(
+      `SELECT id, fecha, bloque_horario, sede, asistio
+      FROM reservas WHERE email = ? AND asistio IN (0, 2)
+      ORDER BY fecha DESC LIMIT 20`,
+      [user.email]
+    );
+
     return NextResponse.json({
       reservas: reservas,
       usuario: {
@@ -199,7 +207,8 @@ export async function GET(request) {
         name: user.name,
         faltas: user.faltas,
         baneado: user.baneado
-      }
+      },
+      historialFaltas
     });
   } catch (error) {
     console.error("Error GET Reservas:", error);
