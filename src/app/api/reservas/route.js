@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, HORARIOS_CIERRE } from "@/app/utils/constants";
+import { getFechaChile, HORARIOS_CIERRE, getBloquesParaSedeFecha } from "@/app/utils/constants";
 import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
 
 // Función de mantenimiento (Reseteo de Faltas)
@@ -86,8 +86,16 @@ export async function POST(request) {
 
     console.log(`[RESERVA] Intento: ${user.email} -> ${bloque_horario} en ${sede}`);
 
-    // F0. Auto-procesar ausencias para liberar cupos (si ya pasaron 15 min)
     const hoyChile = getFechaChile();
+
+    // Validar que el bloque esté permitido para esta sede/fecha
+    const bloquesPermitidos = getBloquesParaSedeFecha(sede, hoyChile);
+    if (!bloquesPermitidos.includes(bloque_horario)) {
+      connection.release();
+      return NextResponse.json({ error: "Bloque no disponible para esta sede hoy" }, { status: 400 });
+    }
+
+    // F0. Auto-procesar ausencias para liberar cupos (si ya pasaron 15 min)
     await procesarAusenciasDirecto(bloque_horario, sede, hoyChile);
 
     // F1. Verificar cierre de bloque (25 min después de inicio)

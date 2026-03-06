@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
+import { getFechaChile, BLOQUES_HORARIOS, getBloquesParaSedeFecha } from "@/app/utils/constants";
 import { procesarAusenciasDirecto } from "@/lib/procesar-ausencias";
 
 const CUPOS_POR_SEDE = {
@@ -31,7 +31,8 @@ async function autoGenerarCupos(fecha) {
     console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fechaStr);
     for (const sede of SEDES) {
       const cuposSede = CUPOS_POR_SEDE[sede];
-      for (const bloque of BLOQUES_HORARIOS) {
+      const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
+      for (const bloque of bloquesSede) {
         await pool.execute(
           "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
           [bloque, sede, cuposSede, fechaStr]
@@ -57,6 +58,27 @@ export async function GET(request) {
 
     if (fecha === hoy && !esFinDeSemana) {
       await autoGenerarCupos(fecha);
+
+      // Limpiar cupos restringidos (ej: Vitacura viernes tarde)
+      for (const s of SEDES) {
+        const bloquesValidos = getBloquesParaSedeFecha(s, fecha);
+        const bloquesInvalidos = BLOQUES_HORARIOS.filter(b => !bloquesValidos.includes(b));
+        if (bloquesInvalidos.length > 0) {
+          for (const bloque of bloquesInvalidos) {
+            // Cancelar reservas existentes en bloques no permitidos
+            await pool.execute(
+              "DELETE FROM reservas WHERE fecha = ? AND sede = ? AND bloque_horario = ?",
+              [fecha, s, bloque]
+            );
+            // Eliminar cupos no permitidos
+            await pool.execute(
+              "DELETE FROM cupos WHERE fecha = ? AND sede = ? AND bloque = ?",
+              [fecha, s, bloque]
+            );
+          }
+          console.log(`[CUPOS] Limpiados bloques restringidos para ${s}: ${bloquesInvalidos.join(', ')}`);
+        }
+      }
 
       // Auto-procesar ausencias (15 min después de inicio) para liberar cupos
       for (const bloque of BLOQUES_HORARIOS) {

@@ -290,6 +290,28 @@ export const HORARIOS_CIERRE = {
   "15-16": "19:20:00",
 };
 
+// Restricción viernes Vitacura: solo bloques hasta 7-8 (vigente hasta fin de 2026)
+export const RESTRICCION_VIERNES_VITACURA = {
+  ultimoBloque: 5,        // Bloques con primer número > 5 no se generan (último bloque: 5-6)
+  vigenciaHasta: '2026-12-31',
+};
+
+// Helper: devuelve los bloques válidos para una sede en una fecha dada
+export function getBloquesParaSedeFecha(sede, fechaStr) {
+  const d = new Date(fechaStr + 'T12:00:00');
+  const esViernes = d.getDay() === 5;
+  if (
+    sede === 'Vitacura' &&
+    esViernes &&
+    fechaStr <= RESTRICCION_VIERNES_VITACURA.vigenciaHasta
+  ) {
+    return BLOQUES_HORARIOS.filter(
+      b => parseInt(b.split('-')[0]) <= RESTRICCION_VIERNES_VITACURA.ultimoBloque
+    );
+  }
+  return [...BLOQUES_HORARIOS];
+}
+
 // Helpers de ordenamiento numerico de bloques
 export function sortBloques(a, b) {
   return parseInt(a.split('-')[0]) - parseInt(b.split('-')[0]);

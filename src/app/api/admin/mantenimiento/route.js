@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
+import { getFechaChile, BLOQUES_HORARIOS, getBloquesParaSedeFecha } from "@/app/utils/constants";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -38,7 +38,8 @@ async function generarCuposSemana(connection) {
 
     for (const sede of SEDES_DEFAULT) {
       const cuposSede = CUPOS_POR_SEDE[sede] || 15;
-      for (const bloque of BLOQUES_HORARIOS) {
+      const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
+      for (const bloque of bloquesSede) {
         await connection.execute(
           "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
           [bloque, sede, cuposSede, fechaStr]
