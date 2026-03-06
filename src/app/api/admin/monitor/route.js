@@ -6,8 +6,17 @@ const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riq
 
 export async function GET(request) {
   try {
-    const userRole = request.headers.get("x-user-type");
-    const userEmail = request.headers.get("x-user");
+    // Leer email desde header (middleware) o directamente desde cookie (fallback)
+    let userEmail = request.headers.get("x-user");
+    if (!userEmail) {
+      try {
+        const cookie = request.cookies.get('user_session');
+        if (cookie) {
+          const session = JSON.parse(cookie.value);
+          userEmail = session.email;
+        }
+      } catch {}
+    }
 
     if (!userEmail || !GOD_MODE_EMAILS.includes(userEmail)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
