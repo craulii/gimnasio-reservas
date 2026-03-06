@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile } from "@/app/utils/constants";
 import { procesarAusenciasDirecto } from "@/lib/procesar-ausencias";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function POST(request) {
-  // Issue #4 fix: Usar headers correctos en vez de JSON.parse
-  const userEmail = request.headers.get("x-user");
-  const userRole = request.headers.get("x-user-type");
+  const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
   if (!userEmail || userRole !== 'admin') {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -107,9 +106,7 @@ export async function POST(request) {
 
 // GET para obtener lista de usuarios de un bloque específico
 export async function GET(request) {
-  // Issue #4 fix: Usar headers correctos en vez de JSON.parse
-  const userEmail = request.headers.get("x-user");
-  const userRole = request.headers.get("x-user-type");
+  const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
   if (!userEmail || userRole !== 'admin') {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { normalizarRut, validarRut } from "@/lib/rut";
 import pool from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 const USM_EMAIL_REGEX = /^[^\s@]+@usm\.cl$/i;
 
@@ -9,8 +10,7 @@ const USM_EMAIL_REGEX = /^[^\s@]+@usm\.cl$/i;
 export async function GET(request) {
   try {
     // 1. SEGURIDAD
-    const userRole = request.headers.get("x-user-type");
-    const adminEmail = request.headers.get("x-user");
+    const { email: adminEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!adminEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -57,7 +57,7 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     // 1. SEGURIDAD
-    const userRole = request.headers.get("x-user-type");
+    const { userType: userRole } = getUserFromRequest(request);
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
@@ -171,7 +171,7 @@ export async function PUT(request) {
 export async function PATCH(request) {
   let connection;
   try {
-    const userRole = request.headers.get("x-user-type");
+    const { userType: userRole } = getUserFromRequest(request);
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
@@ -247,8 +247,7 @@ export async function DELETE(request) {
   let connection;
   try {
     // 1. SEGURIDAD
-    const userRole = request.headers.get("x-user-type");
-    const adminEmail = request.headers.get("x-user");
+    const { email: adminEmail, userType: userRole } = getUserFromRequest(request);
 
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });

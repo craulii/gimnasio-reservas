@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile, HORARIOS_CIERRE, getBloquesParaSedeFecha } from "@/app/utils/constants";
 import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
+import { getUserFromRequest } from "@/lib/auth";
 
 // Función de mantenimiento (Reseteo de Faltas)
 async function verificarYResetearFaltas(connection, email, ultimoReset, faltasActuales) {
@@ -34,7 +35,7 @@ async function verificarYResetearFaltas(connection, email, ultimoReset, faltasAc
 
 // Obtener usuario desde header
 async function getUserFromHeader(request, connection) {
-    const email = request.headers.get('x-user');
+    const { email } = getUserFromRequest(request);
     if (!email) return null;
 
     const [rows] = await connection.execute(
@@ -183,7 +184,7 @@ export async function POST(request) {
 // --- MÉTODO GET: VER MIS RESERVAS ---
 export async function GET(request) {
   try {
-    const email = request.headers.get('x-user');
+    const { email } = getUserFromRequest(request);
     if (!email) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const [userRows] = await pool.execute(
@@ -230,7 +231,7 @@ export async function DELETE(request) {
   try {
     connection = await pool.getConnection();
 
-    const email = request.headers.get('x-user');
+    const { email } = getUserFromRequest(request);
     if (!email) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const [userRows] = await connection.execute(

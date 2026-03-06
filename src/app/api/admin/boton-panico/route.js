@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
+import { getUserFromRequest } from "@/lib/auth";
 
 const CUPOS_POR_SEDE_DEFAULT = {
   'Vitacura': 13,
@@ -32,8 +33,7 @@ async function asegurarCuposFecha(fecha) {
 export async function POST(request) {
   let connection;
   try {
-    const userRole = request.headers.get('x-user-type');
-    const userEmail = request.headers.get('x-user');
+    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json(
@@ -126,8 +126,7 @@ export async function POST(request) {
 export async function PUT(request) {
   let connection;
   try {
-    const userRole = request.headers.get('x-user-type');
-    const userEmail = request.headers.get('x-user');
+    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json(
@@ -204,7 +203,7 @@ export async function PUT(request) {
 // --- MÉTODO GET: OBTENER ESTADO ---
 export async function GET(request) {
   try {
-    const userRole = request.headers.get('x-user-type');
+    const { userType: userRole } = getUserFromRequest(request);
     if (userRole !== 'admin') {
        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }

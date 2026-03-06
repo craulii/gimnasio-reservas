@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import pool from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 // --- GET: LISTAR USUARIOS (ADMIN) ---
 export async function GET(request) {
   try {
-    const userRole = request.headers.get("x-user-type");
-    const userEmail = request.headers.get("x-user");
+    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -27,7 +27,7 @@ export async function GET(request) {
 // --- POST: CREAR USUARIO MANUALMENTE (ADMIN) ---
 export async function POST(request) {
   try {
-    const userRole = request.headers.get("x-user-type");
+    const { userType: userRole } = getUserFromRequest(request);
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }

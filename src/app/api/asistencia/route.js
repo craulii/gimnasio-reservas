@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile } from "@/app/utils/constants";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function POST(request) {
   try {
     // 1. SEGURIDAD
-    const userRole = request.headers.get("x-user-type");
-    const userEmail = request.headers.get("x-user");
+    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin puede marcar asistencia" }, { status: 403 });

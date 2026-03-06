@@ -75,12 +75,8 @@ describe('Issue #4 - asistencia-masiva headers', () => {
     assert.notIncludes(content, 'JSON.parse(userHeader)');
   });
 
-  it('usa request.headers.get("x-user")', () => {
-    assert.includes(content, 'request.headers.get("x-user")');
-  });
-
-  it('usa request.headers.get("x-user-type")', () => {
-    assert.includes(content, 'request.headers.get("x-user-type")');
+  it('usa getUserFromRequest para auth', () => {
+    assert.includes(content, 'getUserFromRequest');
   });
 
   it('verifica rol admin', () => {

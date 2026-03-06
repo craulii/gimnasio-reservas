@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { HORARIOS_LIMITE } from "@/app/utils/constants";
+import { getUserFromRequest } from "@/lib/auth";
 
 // Comparación de hora robusta (Issue #13 fix)
 function horaAMinutos(hora) {
@@ -12,8 +13,7 @@ export async function POST(request) {
   let connection;
   try {
     // 1. SEGURIDAD
-    const userRole = request.headers.get("x-user-type");
-    const userEmail = request.headers.get("x-user");
+    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });

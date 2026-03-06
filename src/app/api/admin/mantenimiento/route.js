@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
 import { getFechaChile, BLOQUES_HORARIOS, getBloquesParaSedeFecha } from "@/app/utils/constants";
+import { getUserFromRequest } from "@/lib/auth";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -149,8 +150,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const userRole = request.headers.get("x-user-type");
-  const userEmail = request.headers.get("x-user");
+  const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
   if (!userEmail || userRole !== "admin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });

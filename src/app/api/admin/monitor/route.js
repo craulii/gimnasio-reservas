@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getFechaChile } from "@/app/utils/constants";
+import { getUserFromRequest } from "@/lib/auth";
 
 const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riquelmep@usm.cl'];
 
 export async function GET(request) {
   try {
-    // Leer email desde header (middleware) o directamente desde cookie (fallback)
-    let userEmail = request.headers.get("x-user");
-    if (!userEmail) {
-      try {
-        const cookie = request.cookies.get('user_session');
-        if (cookie) {
-          const session = JSON.parse(cookie.value);
-          userEmail = session.email;
-        }
-      } catch {}
-    }
+    const { email: userEmail } = getUserFromRequest(request);
 
     if (!userEmail || !GOD_MODE_EMAILS.includes(userEmail)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });

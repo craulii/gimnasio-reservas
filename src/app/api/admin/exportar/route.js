@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 // --- GET: EXPORTAR A CSV ---
 export async function GET(request) {
   try {
     // 1. SEGURIDAD
-    const userRole = request.headers.get('x-user-type');
-    const userEmail = request.headers.get('x-user');
+    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return new NextResponse('No autorizado', { status: 403 });
@@ -137,7 +137,7 @@ export async function GET(request) {
 // --- POST: OBTENER MESES DISPONIBLES ---
 export async function POST(request) {
   try {
-    const userRole = request.headers.get('x-user-type');
+    const { userType: userRole } = getUserFromRequest(request);
     if (userRole !== 'admin') {
         return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }

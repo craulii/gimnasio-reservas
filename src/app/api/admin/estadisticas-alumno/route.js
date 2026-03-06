@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    const adminEmail = request.headers.get("x-user");
-    const userRole = request.headers.get("x-user-type");
+    const { email: adminEmail, userType: userRole } = getUserFromRequest(request);
 
     if (!adminEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "Acceso denegado. Solo administradores." }, { status: 403 });
