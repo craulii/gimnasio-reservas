@@ -61,7 +61,7 @@ export default function LoginForm({ setUser, setMessage }) {
             type="email"
             required
             placeholder="tucorreo@usm.cl"
-            className="block w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-300 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            className="dark-input block w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-300 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()} // Permitir Enter
@@ -79,7 +79,7 @@ export default function LoginForm({ setUser, setMessage }) {
             type="password"
             required
             placeholder="••••••••"
-            className="block w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-300 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+            className="dark-input block w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-300 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()} // Permitir Enter

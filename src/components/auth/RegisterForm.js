@@ -126,7 +126,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             type="text"
             required
             placeholder="Tu nombre completo"
-            className="block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+            className="dark-input block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.name}
             onChange={(e) => setRegisterData({ ...registerData, name: e.target.value })}
           />
@@ -144,7 +144,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             required
             placeholder="12345678-9"
             maxLength="12"
-            className="block w-full pl-3 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+            className="dark-input block w-full pl-3 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.rut}
             onChange={(e) => setRegisterData({ ...registerData, rut: e.target.value })}
           />
@@ -169,7 +169,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             placeholder="tucorreo@usm.cl"
             pattern=".*@usm\.cl$"
             title="Debe ser un correo @usm.cl"
-            className="block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+            className="dark-input block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.email}
             onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
           />
@@ -190,7 +190,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             required
             minLength="8"
             placeholder="Mínimo 8 caracteres"
-            className={`block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border rounded-md focus:outline-none focus:ring-2 sm:text-sm ${
+            className={`dark-input block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border rounded-md focus:outline-none focus:ring-2 sm:text-sm ${
               passwordError 
                 ? "border-red-500 focus:ring-red-400 focus:border-red-400" 
                 : "border-gray-600 focus:ring-green-400 focus:border-green-400"
@@ -221,7 +221,7 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             type="password"
             required
             placeholder="Repite tu contraseña"
-            className="block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
+            className="dark-input block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.confirmPassword}
             onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
           />

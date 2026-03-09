@@ -45,17 +45,12 @@ select option {
   color: #111827;
 }
 
-/* Forzar texto blanco en inputs normales */
-input {
-  color: white !important;
-}
-
-/* Forzar texto blanco cuando Chrome autocompleta */
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active {
+/* Autofill para inputs con fondo oscuro (login, register) */
+.dark-input:-webkit-autofill,
+.dark-input:-webkit-autofill:hover,
+.dark-input:-webkit-autofill:focus,
+.dark-input:-webkit-autofill:active {
     -webkit-text-fill-color: white !important;
-    -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important; /* Mantiene el fondo gris oscuro */
-    caret-color: white !important; /* El cursor que parpadea también blanco */
+    -webkit-box-shadow: 0 0 0 30px #1f2937 inset !important;
+    caret-color: white !important;
 }
