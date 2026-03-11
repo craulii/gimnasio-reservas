@@ -45,6 +45,12 @@ select option {
   color: #111827;
 }
 
+/* Texto blanco para inputs con fondo oscuro (login, register) */
+input.dark-input {
+  color: white;
+  caret-color: white;
+}
+
 /* Autofill para inputs con fondo oscuro (login, register) */
 .dark-input:-webkit-autofill,
 .dark-input:-webkit-autofill:hover,
