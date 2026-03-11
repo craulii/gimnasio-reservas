@@ -150,7 +150,7 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+  const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
   if (!userEmail || userRole !== "admin") {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });

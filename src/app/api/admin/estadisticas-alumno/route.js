@@ -4,7 +4,7 @@ import { getUserFromRequest } from "@/lib/auth";
 
 export async function GET(request) {
   try {
-    const { email: adminEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: adminEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!adminEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "Acceso denegado. Solo administradores." }, { status: 403 });

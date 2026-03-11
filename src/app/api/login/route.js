@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import pool from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { SignJWT } from "jose";
 
 const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
 
@@ -64,10 +65,17 @@ export async function POST(request) {
       user: userData
     });
 
-    response.cookies.set("user_session", JSON.stringify(userData), {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const token = await new SignJWT(userData)
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setExpirationTime("2h")
+      .sign(secret);
+
+    response.cookies.set("user_session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
+      sameSite: "strict",
       path: "/",
       maxAge: 60 * 60 * 2
     });

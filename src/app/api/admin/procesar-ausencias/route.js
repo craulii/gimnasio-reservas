@@ -13,7 +13,7 @@ export async function POST(request) {
   let connection;
   try {
     // 1. SEGURIDAD
-    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });

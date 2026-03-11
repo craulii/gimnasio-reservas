@@ -6,7 +6,7 @@ import { getUserFromRequest } from "@/lib/auth";
 export async function GET(request) {
   try {
     // 1. SEGURIDAD
-    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return new NextResponse('No autorizado', { status: 403 });
@@ -137,7 +137,7 @@ export async function GET(request) {
 // --- POST: OBTENER MESES DISPONIBLES ---
 export async function POST(request) {
   try {
-    const { userType: userRole } = getUserFromRequest(request);
+    const { userType: userRole } = await getUserFromRequest(request);
     if (userRole !== 'admin') {
         return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }

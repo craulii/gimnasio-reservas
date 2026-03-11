@@ -5,7 +5,7 @@ import { procesarAusenciasDirecto } from "@/lib/procesar-ausencias";
 import { getUserFromRequest } from "@/lib/auth";
 
 export async function POST(request) {
-  const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+  const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
   if (!userEmail || userRole !== 'admin') {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -106,7 +106,7 @@ export async function POST(request) {
 
 // GET para obtener lista de usuarios de un bloque específico
 export async function GET(request) {
-  const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+  const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
   if (!userEmail || userRole !== 'admin') {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });

@@ -87,6 +87,19 @@ export async function GET(request) {
           await procesarAusenciasDirecto(bloque, s, fecha);
         }
       }
+
+      // Sincronizar contadores para evitar desfases
+      await pool.execute(`
+        UPDATE cupos c
+        SET reservados = (
+          SELECT COUNT(*)
+          FROM reservas r
+          WHERE r.bloque_horario = c.bloque
+          AND r.fecha = c.fecha
+          AND r.sede = c.sede
+        )
+        WHERE c.fecha = ?
+      `, [fecha]);
     }
 
     let query = "SELECT * FROM cupos WHERE fecha = ?";
@@ -128,7 +141,7 @@ export async function GET(request) {
 export async function PATCH(request) {
   try {
     // 1. SEGURIDAD
-    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json({ error: 'Solo admin puede modificar cupos' }, { status: 403 });

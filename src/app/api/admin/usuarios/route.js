@@ -10,7 +10,7 @@ const USM_EMAIL_REGEX = /^[^\s@]+@usm\.cl$/i;
 export async function GET(request) {
   try {
     // 1. SEGURIDAD
-    const { email: adminEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: adminEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!adminEmail || userRole !== 'admin') {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -57,7 +57,7 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     // 1. SEGURIDAD
-    const { userType: userRole } = getUserFromRequest(request);
+    const { userType: userRole } = await getUserFromRequest(request);
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
@@ -171,7 +171,7 @@ export async function PUT(request) {
 export async function PATCH(request) {
   let connection;
   try {
-    const { userType: userRole } = getUserFromRequest(request);
+    const { userType: userRole } = await getUserFromRequest(request);
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
@@ -247,7 +247,7 @@ export async function DELETE(request) {
   let connection;
   try {
     // 1. SEGURIDAD
-    const { email: adminEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: adminEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (userRole !== 'admin') {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });

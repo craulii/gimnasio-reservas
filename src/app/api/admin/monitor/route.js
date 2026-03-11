@@ -7,7 +7,7 @@ const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riq
 
 export async function GET(request) {
   try {
-    const { email: userEmail } = getUserFromRequest(request);
+    const { email: userEmail } = await getUserFromRequest(request);
 
     if (!userEmail || !GOD_MODE_EMAILS.includes(userEmail)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });

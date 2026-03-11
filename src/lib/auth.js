@@ -3,9 +3,11 @@
 // Lee headers del middleware (x-user, x-user-type) con fallback a cookie directa.
 // Necesario porque Next.js 16 en Vercel no siempre propaga headers del middleware.
 
+import { jwtVerify } from "jose";
+
 const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riquelmep@usm.cl'];
 
-export function getUserFromRequest(request) {
+export async function getUserFromRequest(request) {
   let email = request.headers.get('x-user');
   let userType = request.headers.get('x-user-type');
 
@@ -14,7 +16,8 @@ export function getUserFromRequest(request) {
     try {
       const cookie = request.cookies.get('user_session');
       if (cookie) {
-        const session = JSON.parse(cookie.value);
+        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+        const { payload: session } = await jwtVerify(cookie.value, secret);
         email = session.email || null;
         userType = session.role_type || null;
         // Replicar lógica God Mode del middleware
@@ -23,7 +26,7 @@ export function getUserFromRequest(request) {
         }
       }
     } catch {
-      // Cookie corrupta o inválida
+      // Cookie corrupta, expirada o firma inválida
     }
   }
 

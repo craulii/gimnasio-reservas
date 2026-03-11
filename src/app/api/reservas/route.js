@@ -35,7 +35,7 @@ async function verificarYResetearFaltas(connection, email, ultimoReset, faltasAc
 
 // Obtener usuario desde header
 async function getUserFromHeader(request, connection) {
-    const { email } = getUserFromRequest(request);
+    const { email } = await getUserFromRequest(request);
     if (!email) return null;
 
     const [rows] = await connection.execute(
@@ -184,7 +184,7 @@ export async function POST(request) {
 // --- MÉTODO GET: VER MIS RESERVAS ---
 export async function GET(request) {
   try {
-    const { email } = getUserFromRequest(request);
+    const { email } = await getUserFromRequest(request);
     if (!email) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const [userRows] = await pool.execute(
@@ -231,7 +231,7 @@ export async function DELETE(request) {
   try {
     connection = await pool.getConnection();
 
-    const { email } = getUserFromRequest(request);
+    const { email } = await getUserFromRequest(request);
     if (!email) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const [userRows] = await connection.execute(

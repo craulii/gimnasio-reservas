@@ -33,7 +33,7 @@ async function asegurarCuposFecha(fecha) {
 export async function POST(request) {
   let connection;
   try {
-    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json(
@@ -126,7 +126,7 @@ export async function POST(request) {
 export async function PUT(request) {
   let connection;
   try {
-    const { email: userEmail, userType: userRole } = getUserFromRequest(request);
+    const { email: userEmail, userType: userRole } = await getUserFromRequest(request);
 
     if (!userEmail || userRole !== 'admin') {
       return NextResponse.json(
@@ -203,7 +203,7 @@ export async function PUT(request) {
 // --- MÉTODO GET: OBTENER ESTADO ---
 export async function GET(request) {
   try {
-    const { userType: userRole } = getUserFromRequest(request);
+    const { userType: userRole } = await getUserFromRequest(request);
     if (userRole !== 'admin') {
        return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }

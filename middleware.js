@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { jwtVerify } from "jose";
 
 const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riquelmep@usm.cl'];
 
@@ -11,7 +12,7 @@ const PUBLIC_PATHS = [
   '/static'
 ];
 
-export function middleware(request) {
+export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // 1. DETERMINAR SI ES RUTA PÚBLICA O ARCHIVO ESTÁTICO
@@ -42,8 +43,9 @@ export function middleware(request) {
 
   // 3. VALIDAR Y PASAR DATOS DE SESIÓN A LAS RUTAS
   try {
-    const sessionData = JSON.parse(sessionCookie.value);
-    
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload: sessionData } = await jwtVerify(sessionCookie.value, secret);
+
     // Verificación de integridad de la cookie
     if (!sessionData.email || !sessionData.role_type) {
       throw new Error('Sesión incompleta');
@@ -64,7 +66,7 @@ export function middleware(request) {
     return NextResponse.next({
       request: { headers: requestHeaders }
     });
-    
+
   } catch (error) {
     console.error('Error en middleware:', error.message);
     // Si la cookie es inválida o está corrupta, la limpiamos y redirigimos
