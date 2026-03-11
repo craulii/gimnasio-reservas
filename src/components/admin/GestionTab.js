@@ -177,9 +177,9 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
       if (ok) {
         setMessage(data?.message || "✅ Asistencias guardadas exitosamente");
         setAsistenciasOriginales(JSON.parse(JSON.stringify(asistencias)));
-        
-        // Recargar para confirmar cambios
-        setTimeout(() => cargarUsuariosBloque(), 1000);
+
+        // Recargar inmediatamente para reflejar faltas actualizadas (evita mostrar datos obsoletos)
+        await cargarUsuariosBloque();
       } else {
         const errorMsg = data?.error || data?.message || "Error al guardar asistencias";
         setMessage(`❌ ${errorMsg}`);
