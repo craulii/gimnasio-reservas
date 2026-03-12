@@ -118,7 +118,7 @@ export async function POST(request) {
     try {
       // F. Verificar Cupos Disponibles (con lock FOR UPDATE)
       const [cuposResult] = await connection.execute(
-        'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = ? FOR UPDATE',
+        'SELECT total, reservados FROM cupos WHERE bloque = ? AND sede = ? AND fecha = ? LIMIT 1 FOR UPDATE',
         [bloque_horario, sede, hoyChile]
       );
 

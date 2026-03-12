@@ -33,6 +33,10 @@ CREATE TABLE cupos (
   reservados INTEGER DEFAULT 0
 );
 
+-- Unique constraints to prevent race conditions
+ALTER TABLE cupos ADD CONSTRAINT cupos_bloque_sede_fecha_unique UNIQUE (bloque, sede, fecha);
+ALTER TABLE reservas ADD CONSTRAINT reservas_email_fecha_unique UNIQUE (email, fecha);
+
 -- Indexes for performance
 CREATE INDEX idx_reservas_email ON reservas(email);
 CREATE INDEX idx_reservas_fecha ON reservas(fecha);

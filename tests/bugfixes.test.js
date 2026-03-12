@@ -319,4 +319,72 @@ describe('Frontend - ReservarCupo error display', () => {
   });
 });
 
+// ============================================================
+// Issue #20: Race conditions (faltas infladas, cupos duplicados, overbooking)
+// ============================================================
+
+describe('Issue #20 - Faltas infladas (procesar-ausencias)', () => {
+  const content = readFile('src/lib/procesar-ausencias.js');
+
+  it('UPDATE reservas usa AND asistio IS NULL (atómico)', () => {
+    assert.includes(content, 'AND asistio IS NULL');
+  });
+
+  it('chequea affectedRows antes de incrementar faltas', () => {
+    assert.includes(content, 'affectedRows');
+  });
+
+  it('salta reserva si ya fue procesada (affectedRows === 0)', () => {
+    assert.includes(content, 'affectedRows === 0');
+  });
+});
+
+describe('Issue #20 - Cupos duplicados (ON CONFLICT)', () => {
+  const cupos = readFile('src/app/api/cupos/route.js');
+  const mantenimiento = readFile('src/app/api/admin/mantenimiento/route.js');
+
+  it('autoGenerarCupos usa ON CONFLICT DO NOTHING', () => {
+    assert.includes(cupos, 'ON CONFLICT');
+    assert.includes(cupos, 'DO NOTHING');
+  });
+
+  it('generarCuposSemana usa ON CONFLICT DO NOTHING', () => {
+    assert.includes(mantenimiento, 'ON CONFLICT');
+    assert.includes(mantenimiento, 'DO NOTHING');
+  });
+});
+
+describe('Issue #20 - Overbooking (sync query eliminado)', () => {
+  const cupos = readFile('src/app/api/cupos/route.js');
+
+  it('GET /api/cupos NO tiene UPDATE cupos SET reservados en línea', () => {
+    // El sync query causaba overbooking al resetear reservados durante reservas concurrentes
+    assert.notIncludes(cupos, 'UPDATE cupos c');
+  });
+
+  it('GET /api/cupos NO tiene subquery COUNT de reservas para sync', () => {
+    assert.notIncludes(cupos, 'SET reservados = (');
+  });
+});
+
+describe('Issue #20 - FOR UPDATE con LIMIT 1', () => {
+  const reservas = readFile('src/app/api/reservas/route.js');
+
+  it('SELECT FOR UPDATE usa LIMIT 1', () => {
+    assert.includes(reservas, 'LIMIT 1 FOR UPDATE');
+  });
+});
+
+describe('Issue #20 - UNIQUE constraints en schema', () => {
+  const schema = readFile('supabase-schema.sql');
+
+  it('schema tiene UNIQUE constraint en cupos(bloque, sede, fecha)', () => {
+    assert.includes(schema, 'cupos_bloque_sede_fecha_unique');
+  });
+
+  it('schema tiene UNIQUE constraint en reservas(email, fecha)', () => {
+    assert.includes(schema, 'reservas_email_fecha_unique');
+  });
+});
+
 run();

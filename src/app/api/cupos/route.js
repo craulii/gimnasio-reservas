@@ -35,7 +35,7 @@ async function autoGenerarCupos(fecha) {
       const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
       for (const bloque of bloquesSede) {
         await pool.execute(
-          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?) ON CONFLICT (bloque, sede, fecha) DO NOTHING",
           [bloque, sede, cuposSede, fechaStr]
         );
       }
@@ -88,18 +88,10 @@ export async function GET(request) {
         }
       }
 
-      // Sincronizar contadores para evitar desfases
-      await pool.execute(`
-        UPDATE cupos c
-        SET reservados = (
-          SELECT COUNT(*)
-          FROM reservas r
-          WHERE r.bloque_horario = c.bloque
-          AND r.fecha = c.fecha
-          AND r.sede = c.sede
-        )
-        WHERE c.fecha = ?
-      `, [fecha]);
+      // Sync de contadores eliminado del GET para evitar overbooking:
+      // El UPDATE sin transacción puede resetear `reservados` mientras hay un INSERT
+      // de reserva en vuelo, permitiendo reservas que exceden el total.
+      // El sync ya corre en el cron de mantenimiento (sin reservas concurrentes).
     }
 
     let query = "SELECT * FROM cupos WHERE fecha = ?";

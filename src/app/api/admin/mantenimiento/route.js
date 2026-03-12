@@ -42,7 +42,7 @@ async function generarCuposSemana(connection) {
       const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
       for (const bloque of bloquesSede) {
         await connection.execute(
-          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?)",
+          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?) ON CONFLICT (bloque, sede, fecha) DO NOTHING",
           [bloque, sede, cuposSede, fechaStr]
         );
       }

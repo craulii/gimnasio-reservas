@@ -33,7 +33,19 @@ export async function procesarAusenciasDirecto(bloque, sede, fecha) {
       for (const reserva of pendientes) {
         await connection.beginTransaction();
         try {
-          await connection.execute("UPDATE reservas SET asistio = 2 WHERE id = ?", [reserva.id]);
+          // UPDATE condicional: AND asistio IS NULL garantiza que solo el primer
+          // request concurrente procese esta reserva (evita faltas infladas)
+          const [updateResult] = await connection.execute(
+            "UPDATE reservas SET asistio = 2 WHERE id = ? AND asistio IS NULL",
+            [reserva.id]
+          );
+
+          // Si affectedRows === 0, otro request ya procesó esta reserva → saltar
+          if (updateResult.affectedRows === 0) {
+            await connection.rollback();
+            continue;
+          }
+
           await connection.execute("UPDATE users SET faltas = LEAST(faltas + 1, 3) WHERE email = ?", [reserva.email]);
 
           const [user] = await connection.execute("SELECT faltas FROM users WHERE email = ? LIMIT 1", [reserva.email]);
