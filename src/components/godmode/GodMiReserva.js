@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import ApiService from "@/services/api";
-import { HORARIOS_BLOQUE, HORARIOS_CIERRE, getHoraChile, sortByBloque } from "@/app/utils/constants";
+import { HORARIOS_BLOQUE, HORARIOS_CIERRE, HORA_APERTURA_RESERVAS, getHoraChile, sortByBloque } from "@/app/utils/constants";
 
 export default function GodMiReserva({ user, cupos, loading, setMessage, fetchCupos }) {
   const [sede, setSede] = useState("Vitacura");
@@ -68,6 +68,8 @@ export default function GodMiReserva({ user, cupos, loading, setMessage, fetchCu
     return horaActual >= limite;
   };
 
+  const antesDeApertura = horaActual < HORA_APERTURA_RESERVAS;
+
   const cuposData = cupos || {};
   const cuposFiltrados = Object.entries(cuposData)
     .filter(([, info]) => info.sede === sede)
@@ -100,6 +102,14 @@ export default function GodMiReserva({ user, cupos, loading, setMessage, fetchCu
           })}
         </div>
       </div>
+
+      {/* Banner apertura */}
+      {antesDeApertura && (
+        <div className="bg-slate-900 border border-cyan-500/30 rounded-xl p-4 text-center">
+          <p className="text-cyan-400 font-mono text-sm">Reservas abren 06:30 AM</p>
+          <p className="text-slate-500 font-mono text-xs mt-1">Cupos visibles, reservas bloqueadas</p>
+        </div>
+      )}
 
       {/* Bloques */}
       {loading ? (
@@ -153,15 +163,15 @@ export default function GodMiReserva({ user, cupos, loading, setMessage, fetchCu
                     </button>
                   ) : (
                     <button
-                      disabled={disponibles <= 0 || expirado}
+                      disabled={disponibles <= 0 || expirado || antesDeApertura}
                       onClick={() => hacerReserva(info.bloque, info.sede)}
                       className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-colors ${
-                        expirado || disponibles <= 0
+                        expirado || disponibles <= 0 || antesDeApertura
                           ? 'bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed'
                           : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/30'
                       }`}
                     >
-                      {expirado ? "Cerrado" : disponibles <= 0 ? "Lleno" : "Reservar"}
+                      {antesDeApertura ? "06:30" : expirado ? "Cerrado" : disponibles <= 0 ? "Lleno" : "Reservar"}
                     </button>
                   )}
                 </div>

@@ -290,6 +290,14 @@ export const HORARIOS_CIERRE = {
   "15-16": "19:20:00",
 };
 
+// Hora de apertura de reservas (los cupos se generan antes pero no se pueden reservar)
+export const HORA_APERTURA_RESERVAS = "06:30:00";
+
+// Verifica si las reservas estan abiertas (>= 6:30 AM Chile)
+export function reservasAbiertas() {
+  return getHoraChile() >= HORA_APERTURA_RESERVAS;
+}
+
 // Horario de cierre por sede y día (primer número del último bloque permitido)
 // Vitacura L-J: último bloque 13-14 (cierre 19:00)
 // Vitacura V:   último bloque 5-6   (cierre 13:00)

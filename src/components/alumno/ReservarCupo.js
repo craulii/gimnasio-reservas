@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 // Asegúrate de que la ruta sea correcta según tu estructura
 import ApiService from "../../services/api";
-import { HORARIOS_BLOQUE, HORARIOS_CIERRE, getHoraChile, sortByBloque } from "../../app/utils/constants";
+import { HORARIOS_BLOQUE, HORARIOS_CIERRE, HORA_APERTURA_RESERVAS, getHoraChile, sortByBloque } from "../../app/utils/constants";
 
 export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCupos }) {
   const [sedeSeleccionada, setSedeSeleccionada] = useState("Vitacura");
@@ -119,6 +119,9 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
     return horaActual >= limite;
   };
 
+  // Verificar si las reservas aun no abren (antes de 6:30 AM)
+  const antesDeApertura = horaActual < HORA_APERTURA_RESERVAS;
+
   // Filtrar cupos por sede seleccionada (manejo seguro si cupos es null/undefined)
   const cuposData = cupos || {};
   const cuposFiltrados = Object.entries(cuposData).filter(([key, info]) =>
@@ -175,6 +178,17 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
         </div>
       </div>
 
+      {antesDeApertura && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+          <p className="text-blue-800 font-medium">
+            Las reservas abren a las 06:30 AM
+          </p>
+          <p className="text-blue-600 text-sm mt-1">
+            Los cupos estan disponibles pero aun no puedes reservar
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <p className="text-center">Cargando cupos...</p>
       ) : cuposFiltrados.length === 0 ? (
@@ -192,7 +206,7 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
             return (
               <div
                 key={key}
-                className={`bg-white rounded-lg p-4 shadow-sm ${expirado && !yaReservado ? 'opacity-60' : ''}`}
+                className={`bg-white rounded-lg p-4 shadow-sm ${(expirado && !yaReservado) || antesDeApertura ? 'opacity-60' : ''}`}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -212,17 +226,17 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
                     </button>
                   ) : (
                     <button
-                      disabled={disponibles <= 0 || expirado || tieneReservaHoy}
+                      disabled={disponibles <= 0 || expirado || tieneReservaHoy || antesDeApertura}
                       onClick={() => hacerReserva(info.bloque, info.sede)}
                       className={`px-4 py-2 rounded-lg text-white font-medium ${
-                        expirado || tieneReservaHoy
+                        expirado || tieneReservaHoy || antesDeApertura
                           ? "bg-gray-400 cursor-not-allowed"
                           : disponibles > 0
                             ? "bg-indigo-600 hover:bg-indigo-700"
                             : "bg-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      {tieneReservaHoy ? "Ya reservaste hoy" : expirado ? "Bloque cerrado" : disponibles <= 0 ? "Sin cupos" : "Reservar"}
+                      {antesDeApertura ? "Abre 6:30 AM" : tieneReservaHoy ? "Ya reservaste hoy" : expirado ? "Bloque cerrado" : disponibles <= 0 ? "Sin cupos" : "Reservar"}
                     </button>
                   )}
                 </div>

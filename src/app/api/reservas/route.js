@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, HORARIOS_CIERRE, getBloquesParaSedeFecha } from "@/app/utils/constants";
+import { getFechaChile, HORARIOS_CIERRE, getBloquesParaSedeFecha, reservasAbiertas } from "@/app/utils/constants";
 import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
 import { getUserFromRequest } from "@/lib/auth";
 
@@ -96,7 +96,16 @@ export async function POST(request) {
       return NextResponse.json({ error: "Bloque no disponible para esta sede hoy" }, { status: 400 });
     }
 
-    // F0. Auto-procesar ausencias para liberar cupos (si ya pasaron 15 min)
+    // F0. Verificar hora de apertura de reservas (6:30 AM Chile)
+    if (!reservasAbiertas()) {
+      connection.release();
+      return NextResponse.json(
+        { error: "Las reservas abren a las 06:30 AM. Intenta mas tarde." },
+        { status: 403 }
+      );
+    }
+
+    // F0.5 Auto-procesar ausencias para liberar cupos (si ya pasaron 15 min)
     await procesarAusenciasDirecto(bloque_horario, sede, hoyChile);
 
     // F1. Verificar cierre de bloque (25 min después de inicio)
