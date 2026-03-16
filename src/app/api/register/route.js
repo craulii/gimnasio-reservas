@@ -4,7 +4,7 @@ import { normalizarRut, validarRut } from "@/lib/rut";
 import pool from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
+const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@(usm\.cl|sansano\.usm\.cl)$/i;
 
 function isUsmEmail(email) {
   return USM_EMAIL_REGEX.test(String(email).trim().toLowerCase());
@@ -36,7 +36,7 @@ export async function POST(request) {
     const normalizedEmail = String(email).trim().toLowerCase();
 
     if (!isUsmEmail(normalizedEmail)) {
-      return NextResponse.json({ error: "Solo se permiten correos @usm.cl" }, { status: 400 });
+      return NextResponse.json({ error: "Solo se permiten correos @usm.cl o @sansano.usm.cl" }, { status: 400 });
     }
 
     if (password !== confirmPassword) {

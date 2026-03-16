@@ -167,8 +167,8 @@ export default function RegisterForm({ setMessage, setIsRegistering }) {
             type="email"
             required
             placeholder="tucorreo@usm.cl"
-            pattern=".*@usm\.cl$"
-            title="Debe ser un correo @usm.cl"
+            pattern=".*@(usm\.cl|sansano\.usm\.cl)$"
+            title="Debe ser un correo @usm.cl o @sansano.usm.cl"
             className="dark-input block w-full pl-10 pr-4 py-2 bg-gray-700 placeholder-gray-500 text-white border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400 sm:text-sm"
             value={registerData.email}
             onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}

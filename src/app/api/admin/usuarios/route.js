@@ -4,7 +4,7 @@ import { normalizarRut, validarRut } from "@/lib/rut";
 import pool from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth";
 
-const USM_EMAIL_REGEX = /^[^\s@]+@usm\.cl$/i;
+const USM_EMAIL_REGEX = /^[^\s@]+@(usm\.cl|sansano\.usm\.cl)$/i;
 
 // --- GET: OBTENER USUARIOS ---
 export async function GET(request) {
@@ -80,7 +80,7 @@ export async function PUT(request) {
     if (newEmail && newEmail !== email) {
       const normalizedNewEmail = newEmail.toLowerCase().trim();
       if (!USM_EMAIL_REGEX.test(normalizedNewEmail)) {
-        return NextResponse.json({ error: "Email debe ser @usm.cl" }, { status: 400 });
+        return NextResponse.json({ error: "Email debe ser @usm.cl o @sansano.usm.cl" }, { status: 400 });
       }
       const [duplicateCheck] = await pool.execute(
         "SELECT email FROM users WHERE email = ?",

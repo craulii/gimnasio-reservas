@@ -4,7 +4,7 @@ import pool from "@/lib/db";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SignJWT } from "jose";
 
-const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@usm\.cl$/i;
+const USM_EMAIL_REGEX = /^[a-z0-9._%+-]+@(usm\.cl|sansano\.usm\.cl)$/i;
 
 export async function POST(request) {
   try {
@@ -25,7 +25,7 @@ export async function POST(request) {
     const email = String(rawEmail).trim().toLowerCase();
 
     if (!USM_EMAIL_REGEX.test(email)) {
-      return NextResponse.json({ error: "Email no válido (debe ser @usm.cl)" }, { status: 401 });
+      return NextResponse.json({ error: "Email no válido (debe ser @usm.cl o @sansano.usm.cl)" }, { status: 401 });
     }
 
     const [rows] = await pool.execute(
