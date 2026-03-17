@@ -258,6 +258,30 @@ class ApiService {
     return await fetchWithAuth('/api/admin/monitor', { method: "GET" });
   }
 
+  // --- GOD MODE: HERRAMIENTAS ---
+
+  static async generarCuposHastaFecha(fechaHasta) {
+    return await fetchWithAuth('/api/admin/generar-cupos', {
+      method: "POST",
+      body: JSON.stringify({ fechaHasta }),
+    });
+  }
+
+  static async reservarParaAlumno(email, fecha, bloque_horario, sede) {
+    return await fetchWithAuth('/api/admin/reservar-alumno', {
+      method: "POST",
+      body: JSON.stringify({ email, fecha, bloque_horario, sede }),
+    });
+  }
+
+  static async getCuposFecha(fecha, sede) {
+    let endpoint = `/api/cupos?fecha=${fecha}`;
+    if (sede) {
+      endpoint += `&sede=${encodeURIComponent(sede)}`;
+    }
+    return await fetchWithAuth(endpoint, { method: "GET" });
+  }
+
   static async logout() {
     // Esto llama al archivo que creamos en el paso 1
     return await fetchWithAuth('/api/logout', { method: "POST" });

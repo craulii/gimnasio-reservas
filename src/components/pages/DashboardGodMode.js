@@ -11,6 +11,7 @@ import GodCupos from "@/components/godmode/GodCupos";
 import GodUsuarios from "@/components/godmode/GodUsuarios";
 import GodReservas from "@/components/godmode/GodReservas";
 import GodMiReserva from "@/components/godmode/GodMiReserva";
+import GodHerramientas from "@/components/godmode/GodHerramientas";
 import useCupos from "@/hooks/useCupos";
 
 const REFRESH_INTERVAL = 15;
@@ -21,6 +22,7 @@ const TABS = [
   { id: 'usuarios', label: 'Usuarios' },
   { id: 'reservas', label: 'Reservas' },
   { id: 'reservar', label: 'Mi Reserva' },
+  { id: 'herramientas', label: 'Herramientas' },
 ];
 
 // Heatmap color por porcentaje de ocupacion
@@ -308,6 +310,10 @@ export default function DashboardGodMode({ user, onLogout }) {
 
         {activeTab === 'reservar' && (
           <GodMiReserva user={user} cupos={cupos} loading={cuposLoading} setMessage={setMessage} fetchCupos={fetchCupos} />
+        )}
+
+        {activeTab === 'herramientas' && (
+          <GodHerramientas setMessage={setMessage} />
         )}
 
         {/* FOOTER */}
