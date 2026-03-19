@@ -1,26 +1,30 @@
 "use client";
 import { useState } from "react";
+import { getFechaChile } from "../../app/utils/constants";
 import EstadisticasGeneral from "./estadisticas/EstadisticasGeneral";
 import EstadisticasAlumno from "./estadisticas/EstadisticasAlumno";
 import EstadisticasBloque from "./estadisticas/EstadisticasBloque";
+import ExportarDatos from "./estadisticas/ExportarDatos";
+
+function calcularFechaInicio() {
+  const hoy = getFechaChile();
+  const [y, m, d] = hoy.split('-').map(Number);
+  const fecha = new Date(y, m - 1, d - 30);
+  return fecha.toLocaleDateString('en-CA');
+}
 
 export default function EstadisticasTab({ cupos = {}, setMessage }) {
   const [tipoEstadistica, setTipoEstadistica] = useState("general");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 AGREGADO: Manejo de fechas para las pestañas de Alumno y Bloque
-  // Por defecto: Últimos 30 días
-  const [fechaInicio, setFechaInicio] = useState(
-    new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]
-  );
-  const [fechaFin, setFechaFin] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  const [fechaInicio, setFechaInicio] = useState(calcularFechaInicio);
+  const [fechaFin, setFechaFin] = useState(getFechaChile);
 
   const tabs = [
     { id: "general", label: "General", desc: "Vista global del gimnasio" },
     { id: "alumno", label: "Por Alumno", desc: "Estadísticas individuales" },
     { id: "bloque", label: "Por Bloque", desc: "Análisis de horarios" },
+    { id: "exportar", label: "Exportar", desc: "Descargar datos en Excel" },
   ];
 
   return (
@@ -49,8 +53,8 @@ export default function EstadisticasTab({ cupos = {}, setMessage }) {
         </div>
       )}
 
-      {/* 📅 SELECTOR DE FECHAS (Solo visible para Alumno y Bloque) */}
-      {tipoEstadistica !== "general" && (
+      {/* Selector de fechas (solo Alumno y Bloque) */}
+      {(tipoEstadistica === "alumno" || tipoEstadistica === "bloque") && (
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <span className="text-gray-600 font-medium text-sm">Desde:</span>
@@ -96,13 +100,17 @@ export default function EstadisticasTab({ cupos = {}, setMessage }) {
         )}
         
         {tipoEstadistica === "bloque" && (
-          <EstadisticasBloque 
-            cupos={cupos} 
+          <EstadisticasBloque
+            cupos={cupos}
             fechaInicio={fechaInicio}
             fechaFin={fechaFin}
-            setMessage={setMessage} 
-            setLoading={setLoading} 
+            setMessage={setMessage}
+            setLoading={setLoading}
           />
+        )}
+
+        {tipoEstadistica === "exportar" && (
+          <ExportarDatos setMessage={setMessage} />
         )}
       </div>
     </div>

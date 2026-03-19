@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import { getUserFromRequest } from "@/lib/auth";
+import { getFechaChile } from "@/app/utils/constants";
 
 // --- GET: EXPORTAR A CSV ---
 export async function GET(request) {
@@ -26,10 +27,10 @@ export async function GET(request) {
       const ultimoDia = new Date(year, month, 0).getDate();
       fechaFin = `${mes}-${ultimoDia.toString().padStart(2, '0')}`;
     } else {
-      const hoy = new Date();
-      fechaFin = hoy.toISOString().split('T')[0];
-      const hace3Meses = new Date(hoy.getFullYear(), hoy.getMonth() - 3, hoy.getDate());
-      fechaInicio = hace3Meses.toISOString().split('T')[0];
+      fechaFin = getFechaChile();
+      const [y, m, d] = fechaFin.split('-').map(Number);
+      const hace3Meses = new Date(y, m - 1 - 3, d);
+      fechaInicio = hace3Meses.toLocaleDateString('en-CA');
     }
 
     let csvContent = '';
@@ -150,7 +151,7 @@ export async function POST(request) {
         MAX(fecha) as fecha_fin,
         COUNT(*) as total_registros_cupos
       FROM cupos c
-      WHERE fecha < DATE_TRUNC('month', CURRENT_DATE)
+      WHERE fecha <= CURRENT_DATE
       GROUP BY TO_CHAR(fecha, 'YYYY-MM')
       ORDER BY mes DESC
       LIMIT 12

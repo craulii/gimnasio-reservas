@@ -3,6 +3,7 @@ import { useState } from "react";
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 // Asegúrate de que la ruta sea correcta (3 niveles hacia arriba desde components/admin/estadisticas)
 import ApiService from "../../../services/api";
+import { getFechaChile } from "../../../app/utils/constants";
 
 const COLORS = ['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
 
@@ -17,32 +18,21 @@ export default function EstadisticasGeneral({ setMessage, setLoading }) {
     setMessage("Cargando estadísticas...");
 
     try {
-      const hoy = new Date();
-      const fechaFin = hoy.toISOString().split('T')[0];
-      const fechaInicio = new Date(hoy);
+      const fechaFin = getFechaChile();
+      const [y, m, d] = fechaFin.split('-').map(Number);
 
-      // Calcular fecha inicio según el periodo
+      let dias = 30;
       switch(periodo) {
-        case "1semana":
-          fechaInicio.setDate(hoy.getDate() - 7);
-          break;
-        case "1mes":
-          fechaInicio.setMonth(hoy.getMonth() - 1);
-          break;
-        case "3meses":
-          fechaInicio.setMonth(hoy.getMonth() - 3);
-          break;
-        case "6meses":
-          fechaInicio.setMonth(hoy.getMonth() - 6);
-          break;
-        case "12meses":
-          fechaInicio.setMonth(hoy.getMonth() - 12);
-          break;
-        default:
-          fechaInicio.setMonth(hoy.getMonth() - 1);
+        case "1semana": dias = 7; break;
+        case "1mes": dias = 30; break;
+        case "3meses": dias = 90; break;
+        case "6meses": dias = 180; break;
+        case "12meses": dias = 365; break;
+        default: dias = 30;
       }
 
-      const fechaInicioStr = fechaInicio.toISOString().split('T')[0];
+      const inicioDate = new Date(y, m - 1, d - dias);
+      const fechaInicioStr = inicioDate.toLocaleDateString('en-CA');
 
       // La llamada es correcta, las cookies viajan solas.
       const { ok, data } = await ApiService.getEstadisticas(fechaInicioStr, fechaFin);

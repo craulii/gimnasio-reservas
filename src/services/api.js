@@ -226,6 +226,10 @@ class ApiService {
     return await fetchWithAuth('/api/admin/exportar', { method: "POST" });
   }
 
+  static async exportarCompleto(fechaInicio, fechaFin) {
+    return await fetchWithAuth(`/api/admin/exportar-completo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`, { method: "GET" });
+  }
+
   static async exportarDatos(tipo, mes) {
     let endpoint = `/api/admin/exportar?tipo=${tipo}`;
     if (mes) {
