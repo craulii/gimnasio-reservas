@@ -40,8 +40,6 @@ export async function GET(request) {
 
     queryBloques += " GROUP BY bloque_horario ORDER BY bloque_horario";
 
-    const [estadisticasBloques] = await pool.execute(queryBloques, params);
-
     // QUERY 2: ESTADÍSTICAS POR SEDE
     let querySedes = `
       SELECT
@@ -64,8 +62,6 @@ export async function GET(request) {
 
     querySedes += " GROUP BY sede ORDER BY sede";
 
-    const [estadisticasSedes] = await pool.execute(querySedes, paramsSedes);
-
     // QUERY 3: RESUMEN GENERAL
     let queryResumen = `
       SELECT
@@ -85,7 +81,12 @@ export async function GET(request) {
         queryResumen += " AND fecha >= CURRENT_DATE - INTERVAL '30 days'";
     }
 
-    const [resumen] = await pool.execute(queryResumen, params);
+    // Ejecutar las 3 queries en paralelo
+    const [[estadisticasBloques], [estadisticasSedes], [resumen]] = await Promise.all([
+      pool.execute(queryBloques, params),
+      pool.execute(querySedes, paramsSedes),
+      pool.execute(queryResumen, params),
+    ]);
 
     const resultado = {
       resumen: resumen[0] || {
@@ -98,7 +99,9 @@ export async function GET(request) {
       por_sede: estadisticasSedes || [],
     };
 
-    return NextResponse.json(resultado);
+    return NextResponse.json(resultado, {
+      headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=120' }
+    });
 
   } catch (error) {
     console.error("Error completo en estadísticas:", error);

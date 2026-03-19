@@ -14,8 +14,6 @@ import GodMiReserva from "@/components/godmode/GodMiReserva";
 import GodHerramientas from "@/components/godmode/GodHerramientas";
 import useCupos from "@/hooks/useCupos";
 
-const REFRESH_INTERVAL = 15;
-
 const TABS = [
   { id: 'monitor', label: 'Monitor' },
   { id: 'gestion', label: 'Gestion' },
@@ -71,11 +69,10 @@ export default function DashboardGodMode({ user, onLogout }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [activeTab, setActiveTab] = useState('monitor');
   const [message, setMessage] = useState("");
-  const timerRef = useRef(null);
-  const countdownRef = useRef(null);
 
   // Hook de cupos para tabs admin/alumno
   const { cupos, loading: cuposLoading, fetchCupos } = useCupos(user);
@@ -86,6 +83,7 @@ export default function DashboardGodMode({ user, onLogout }) {
       if (res.ok) {
         setData(res.data);
         setError(null);
+        setLastUpdate(new Date());
       } else {
         setError(res.data?.error || "Error cargando datos");
       }
@@ -93,26 +91,16 @@ export default function DashboardGodMode({ user, onLogout }) {
       setError("Error de conexion");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  // Initial load + auto-refresh
-  useEffect(() => {
+  // Initial load only (no polling)
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchData();
-
-    timerRef.current = setInterval(() => {
-      fetchData();
-      setCountdown(REFRESH_INTERVAL);
-    }, REFRESH_INTERVAL * 1000);
-
-    countdownRef.current = setInterval(() => {
-      setCountdown(prev => (prev <= 1 ? REFRESH_INTERVAL : prev - 1));
-    }, 1000);
-
-    return () => {
-      clearInterval(timerRef.current);
-      clearInterval(countdownRef.current);
-    };
   }, [fetchData]);
 
   // Auto-clear message after 4s
@@ -195,19 +183,26 @@ export default function DashboardGodMode({ user, onLogout }) {
           <div className="bg-cyan-500/20 border border-cyan-500/40 rounded px-3 py-1">
             <span className="text-cyan-400 font-mono font-bold text-sm tracking-wider">ChrisCrauli GOD MODE</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-            </span>
-            <span className="text-emerald-400 text-xs font-mono">LIVE</span>
-          </div>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-slate-500 text-xs font-mono">{user.email}</span>
-          <div className="text-slate-400 text-xs font-mono tabular-nums bg-slate-800 rounded px-2 py-1">
-            {countdown}s
-          </div>
+          {lastUpdate && (
+            <span className="text-slate-600 text-[10px] font-mono hidden sm:inline">
+              {lastUpdate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </span>
+          )}
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="text-cyan-400 text-xs font-mono border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 rounded px-3 py-1 transition-colors disabled:opacity-50"
+          >
+            {refreshing ? (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="animate-spin inline-block w-3 h-3 border-t border-cyan-400 rounded-full" />
+                ...
+              </span>
+            ) : 'Actualizar'}
+          </button>
           {error && <span className="text-red-400 text-xs">{error}</span>}
           <button
             onClick={onLogout}

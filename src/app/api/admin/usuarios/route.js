@@ -21,27 +21,33 @@ export async function GET(request) {
     const tipo = searchParams.get("tipo") || "todos";
 
     let query = `
-      SELECT rol, rut, name, email, is_admin, faltas, baneado,
-        (SELECT COUNT(*) FROM reservas WHERE email = users.email) as total_reservas,
-        (SELECT COUNT(*) FROM reservas WHERE email = users.email AND asistio = 1) as total_asistencias
-      FROM users
+      SELECT u.rol, u.rut, u.name, u.email, u.is_admin, u.faltas, u.baneado,
+        COALESCE(r.total_reservas, 0) as total_reservas,
+        COALESCE(r.total_asistencias, 0) as total_asistencias
+      FROM users u
+      LEFT JOIN (
+        SELECT email,
+          COUNT(*) as total_reservas,
+          SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END) as total_asistencias
+        FROM reservas GROUP BY email
+      ) r ON u.email = r.email
       WHERE 1=1
     `;
     const params = [];
 
     if (tipo === "alumnos") {
-      query += " AND is_admin = 0";
+      query += " AND u.is_admin = 0";
     } else if (tipo === "admins") {
-      query += " AND is_admin = 1";
+      query += " AND u.is_admin = 1";
     }
 
     if (search) {
-      query += " AND (name LIKE ? OR email LIKE ? OR rut LIKE ? OR rol LIKE ?)";
+      query += " AND (u.name LIKE ? OR u.email LIKE ? OR u.rut LIKE ? OR u.rol LIKE ?)";
       const term = `%${search}%`;
       params.push(term, term, term, term);
     }
 
-    query += " ORDER BY name ASC LIMIT 500";
+    query += " ORDER BY u.name ASC LIMIT 500";
 
     const [users] = await pool.execute(query, params);
 

@@ -156,7 +156,7 @@ export async function GET(request) {
       tendencia_7d: tendenciaRows || [],
       mantenimiento: mantenimiento,
       usuarios_totales: totalesRows?.[0] || { total: 0, admins: 0, baneados: 0 }
-    });
+    }, { headers: { 'Cache-Control': 'private, no-cache' } });
 
   } catch (error) {
     console.error("[God Mode Monitor] Error:", error);

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ApiService from "@/services/api";
 import GodModalUsuario from "./GodModalUsuario";
 import { HORARIOS_BLOQUE } from "@/app/utils/constants";
@@ -13,10 +13,17 @@ export default function GodUsuarios({ setMessage }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [faltasUsuario, setFaltasUsuario] = useState(null);
   const [loadingFaltas, setLoadingFaltas] = useState(false);
+  const debounceRef = useRef(null);
 
+  // Tipo cambia -> fetch inmediato
+  useEffect(() => { cargarUsuarios(); }, [tipo]);
+
+  // Busqueda cambia -> debounce 400ms
   useEffect(() => {
-    cargarUsuarios();
-  }, [busqueda, tipo]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => cargarUsuarios(), 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [busqueda]);
 
   const cargarUsuarios = async () => {
     setLoading(true);

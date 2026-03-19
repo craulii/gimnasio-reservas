@@ -46,12 +46,11 @@ export async function procesarAusenciasDirecto(bloque, sede, fecha) {
             continue;
           }
 
-          await connection.execute("UPDATE users SET faltas = LEAST(faltas + 1, 3) WHERE email = ?", [reserva.email]);
-
-          const [user] = await connection.execute("SELECT faltas FROM users WHERE email = ? LIMIT 1", [reserva.email]);
-          if (user[0]?.faltas >= 3) {
-            await connection.execute("UPDATE users SET baneado = 1 WHERE email = ?", [reserva.email]);
-          }
+          // Combo: incrementar faltas y auto-banear si llega a 3 en una sola query
+          await connection.execute(
+            "UPDATE users SET faltas = LEAST(faltas + 1, 3), baneado = CASE WHEN LEAST(faltas + 1, 3) >= 3 THEN 1 ELSE baneado END WHERE email = ?",
+            [reserva.email]
+          );
 
           await connection.execute(
             "UPDATE cupos SET reservados = GREATEST(0, reservados - 1) WHERE bloque = ? AND sede = ? AND fecha = ?",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, BLOQUES_HORARIOS, getBloquesParaSedeFecha } from "@/app/utils/constants";
-import { procesarAusenciasDirecto } from "@/lib/procesar-ausencias";
+import { getFechaChile, BLOQUES_HORARIOS, HORARIOS_LIMITE, getBloquesParaSedeFecha } from "@/app/utils/constants";
+import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
 import { getUserFromRequest } from "@/lib/auth";
 
 const CUPOS_POR_SEDE = {
@@ -10,38 +10,28 @@ const CUPOS_POR_SEDE = {
 };
 const SEDES = ['Vitacura', 'San Joaquín'];
 
-// Fallback: genera cupos de la semana si el cron no corrio
+// Fallback: genera cupos para una fecha si el cron no corrio
+// Retorna true si se generaron cupos nuevos
 async function autoGenerarCupos(fecha) {
-  const fechaBase = new Date(fecha + 'T12:00:00');
+  const [existentes] = await pool.execute(
+    "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
+    [fecha]
+  );
+  if (Number(existentes[0].count) > 0) return false;
 
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(fechaBase);
-    d.setDate(d.getDate() + i);
-    const fechaStr = d.toISOString().split('T')[0];
-
-    // No generar cupos para fines de semana
-    const diaSemana = d.getDay();
-    if (diaSemana === 0 || diaSemana === 6) continue;
-
-    const [existentes] = await pool.execute(
-      "SELECT COUNT(*) as count FROM cupos WHERE fecha = ?",
-      [fechaStr]
-    );
-    if (existentes[0].count > 0) continue;
-
-    console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fechaStr);
-    for (const sede of SEDES) {
-      const cuposSede = CUPOS_POR_SEDE[sede];
-      const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
-      for (const bloque of bloquesSede) {
-        await pool.execute(
-          "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?) ON CONFLICT (bloque, sede, fecha) DO NOTHING",
-          [bloque, sede, cuposSede, fechaStr]
-        );
-      }
+  console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fecha);
+  for (const sede of SEDES) {
+    const cuposSede = CUPOS_POR_SEDE[sede];
+    const bloquesSede = getBloquesParaSedeFecha(sede, fecha);
+    for (const bloque of bloquesSede) {
+      await pool.execute(
+        "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?) ON CONFLICT (bloque, sede, fecha) DO NOTHING",
+        [bloque, sede, cuposSede, fecha]
+      );
     }
   }
-  console.log("[AUTO-CUPOS] Cupos semanales verificados/generados");
+  console.log("[AUTO-CUPOS] Cupos generados para:", fecha);
+  return true;
 }
 
 // --- GET: OBTENER CUPOS (Público/Privado) ---
@@ -58,40 +48,42 @@ export async function GET(request) {
     const esFinDeSemana = hoyDate.getDay() === 0 || hoyDate.getDay() === 6;
 
     if (fecha === hoy && !esFinDeSemana) {
-      await autoGenerarCupos(fecha);
+      const cuposGenerados = await autoGenerarCupos(fecha);
 
-      // Limpiar cupos restringidos (ej: Vitacura viernes tarde)
-      for (const s of SEDES) {
-        const bloquesValidos = getBloquesParaSedeFecha(s, fecha);
-        const bloquesInvalidos = BLOQUES_HORARIOS.filter(b => !bloquesValidos.includes(b));
-        if (bloquesInvalidos.length > 0) {
-          for (const bloque of bloquesInvalidos) {
-            // Cancelar reservas existentes en bloques no permitidos
-            await pool.execute(
-              "DELETE FROM reservas WHERE fecha = ? AND sede = ? AND bloque_horario = ?",
-              [fecha, s, bloque]
-            );
-            // Eliminar cupos no permitidos
-            await pool.execute(
-              "DELETE FROM cupos WHERE fecha = ? AND sede = ? AND bloque = ?",
-              [fecha, s, bloque]
-            );
+      // Limpiar cupos restringidos solo si se acaban de generar
+      if (cuposGenerados) {
+        for (const s of SEDES) {
+          const bloquesValidos = getBloquesParaSedeFecha(s, fecha);
+          const bloquesInvalidos = BLOQUES_HORARIOS.filter(b => !bloquesValidos.includes(b));
+          if (bloquesInvalidos.length > 0) {
+            for (const bloque of bloquesInvalidos) {
+              await pool.execute(
+                "DELETE FROM reservas WHERE fecha = ? AND sede = ? AND bloque_horario = ?",
+                [fecha, s, bloque]
+              );
+              await pool.execute(
+                "DELETE FROM cupos WHERE fecha = ? AND sede = ? AND bloque = ?",
+                [fecha, s, bloque]
+              );
+            }
+            console.log(`[CUPOS] Limpiados bloques restringidos para ${s}: ${bloquesInvalidos.join(', ')}`);
           }
-          console.log(`[CUPOS] Limpiados bloques restringidos para ${s}: ${bloquesInvalidos.join(', ')}`);
         }
       }
 
-      // Auto-procesar ausencias (15 min después de inicio) para liberar cupos
+      // Auto-procesar ausencias solo para bloques que ya expiraron
+      const horaActual = new Date().toLocaleTimeString('es-CL', {
+        timeZone: 'America/Santiago',
+        hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+      const minutosActuales = horaAMinutos(horaActual);
+
       for (const bloque of BLOQUES_HORARIOS) {
+        if (minutosActuales < horaAMinutos(HORARIOS_LIMITE[bloque])) continue;
         for (const s of SEDES) {
           await procesarAusenciasDirecto(bloque, s, fecha);
         }
       }
-
-      // Sync de contadores eliminado del GET para evitar overbooking:
-      // El UPDATE sin transacción puede resetear `reservados` mientras hay un INSERT
-      // de reserva en vuelo, permitiendo reservas que exceden el total.
-      // El sync ya corre en el cron de mantenimiento (sin reservas concurrentes).
     }
 
     let query = "SELECT * FROM cupos WHERE fecha = ?";
@@ -121,7 +113,12 @@ export async function GET(request) {
       };
     });
 
-    return NextResponse.json(cupos);
+    // Cache-Control: cupos de hoy cambian con reservas, otras fechas son estables
+    const headers = fecha === hoy
+      ? { 'Cache-Control': 'private, max-age=10, stale-while-revalidate=20' }
+      : { 'Cache-Control': 'public, max-age=300, s-maxage=300' };
+
+    return NextResponse.json(cupos, { headers });
 
   } catch (error) {
     console.error("Error API Cupos:", error);

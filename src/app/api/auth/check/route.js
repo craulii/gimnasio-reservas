@@ -18,7 +18,10 @@ export async function GET(request) {
     return NextResponse.json({
         authenticated: true,
         user: user
-    }, { status: 200 });
+    }, {
+      status: 200,
+      headers: { 'Cache-Control': 'private, max-age=60' }
+    });
 
   } catch (error) {
     return NextResponse.json({

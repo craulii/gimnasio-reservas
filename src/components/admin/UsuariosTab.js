@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 // Asegúrate de la ruta correcta
 import ApiService from "../../services/api";
 import ModalEditarUsuario from "./ModalEditarUsuario";
@@ -14,10 +14,17 @@ export default function UsuariosTab({ setMessage }) {
   const [modalUsuario, setModalUsuario] = useState(false);
   const [faltasUsuario, setFaltasUsuario] = useState(null); // {email, name, faltas: []}
   const [loadingFaltas, setLoadingFaltas] = useState(false);
+  const debounceRef = useRef(null);
 
+  // Tipo cambia -> fetch inmediato
+  useEffect(() => { cargarUsuarios(); }, [tipoUsuarios]);
+
+  // Busqueda cambia -> debounce 400ms
   useEffect(() => {
-    cargarUsuarios();
-  }, [busquedaUsuarios, tipoUsuarios]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => cargarUsuarios(), 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [busquedaUsuarios]);
 
   const cargarUsuarios = async () => {
     setLoading(true);
