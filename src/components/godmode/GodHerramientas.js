@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import ApiService from "@/services/api";
-import { SEDES, getBloquesParaSedeFecha, HORARIOS_BLOQUE, sortBloques } from "@/app/utils/constants";
+import { SEDES, getBloquesParaSedeFecha, HORARIOS_BLOQUE, sortBloques, getFechaChile } from "@/app/utils/constants";
 
 export default function GodHerramientas({ setMessage }) {
   // --- Generar Cupos state ---
@@ -22,13 +22,12 @@ export default function GodHerramientas({ setMessage }) {
   const [buscando, setBuscando] = useState(false);
   const debounceRef = useRef(null);
 
-  // Date limits
-  const hoy = new Date();
-  const manana = new Date(hoy);
-  manana.setDate(manana.getDate() + 1);
-  const maxDate = new Date(hoy);
+  // Date limits (Chile timezone — God Mode permite hoy)
+  const hoyChile = getFechaChile();
+  const hoyDate = new Date(hoyChile + 'T12:00:00');
+  const maxDate = new Date(hoyDate);
   maxDate.setDate(maxDate.getDate() + 90);
-  const minDateStr = manana.toISOString().split('T')[0];
+  const minDateStr = hoyChile;
   const maxDateStr = maxDate.toISOString().split('T')[0];
 
   // --- Búsqueda de alumnos con debounce ---
