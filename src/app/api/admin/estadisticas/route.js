@@ -24,7 +24,7 @@ export async function GET(request) {
         COUNT(*) as total_reservas,
         COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN
-            ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 2)
+            ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0)::numeric / COUNT(*)) * 100, 2)
         ELSE 0 END as porcentaje_asistencia
       FROM reservas
       WHERE 1=1
@@ -49,7 +49,7 @@ export async function GET(request) {
         COUNT(*) as total_reservas,
         COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN
-            ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 2)
+            ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0)::numeric / COUNT(*)) * 100, 2)
         ELSE 0 END as porcentaje_asistencia
       FROM reservas
       WHERE 1=1
@@ -73,7 +73,7 @@ export async function GET(request) {
         COUNT(*) as total_reservas,
         COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
         CASE WHEN COUNT(*) > 0 THEN
-            ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) / COUNT(*)) * 100, 2)
+            ROUND((COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0)::numeric / COUNT(*)) * 100, 2)
         ELSE 0 END as porcentaje_asistencia
       FROM reservas
       WHERE 1=1

@@ -56,8 +56,8 @@ export async function GET(request) {
     const [estadisticasGenerales] = await pool.execute(
       `SELECT
         COUNT(*) as total_reservas,
-        COALESCE(SUM(asistio), 0) as total_asistencias,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
         MIN(fecha) as primera_reserva,
         MAX(fecha) as ultima_reserva,
         COUNT(DISTINCT fecha) as dias_activos
@@ -71,8 +71,8 @@ export async function GET(request) {
       `SELECT
         bloque_horario,
         COUNT(*) as total_reservas,
-        COALESCE(SUM(asistio), 0) as asistencias,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as asistencias,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia
       FROM reservas
       WHERE email = ? ${dateCondition}
       GROUP BY bloque_horario
@@ -94,8 +94,8 @@ export async function GET(request) {
       `SELECT
         fecha,
         COUNT(*) as reservas_dia,
-        COALESCE(SUM(asistio), 0) as asistencias_dia,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_dia
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as asistencias_dia,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_dia
       FROM reservas
       WHERE email = ? ${dateCondition}
       GROUP BY fecha
@@ -110,7 +110,7 @@ export async function GET(request) {
       FROM (
         SELECT
           email,
-          (SUM(asistio) / COUNT(*)) * 100 as porc_usuario
+          (SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100 as porc_usuario
         FROM reservas
         ${globalDateCondition}
         GROUP BY email

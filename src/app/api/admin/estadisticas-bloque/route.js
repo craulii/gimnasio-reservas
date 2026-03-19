@@ -34,11 +34,11 @@ export async function GET(request) {
     const [estadisticasGenerales] = await pool.execute(
       `SELECT
         COUNT(*) as total_reservas,
-        COALESCE(SUM(asistio), 0) as total_asistencias,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
         COUNT(DISTINCT email) as alumnos_unicos,
         COUNT(DISTINCT fecha) as dias_activos,
-        CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*) / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_reservas_por_dia,
+        CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*)::numeric / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_reservas_por_dia,
         MIN(fecha) as primera_fecha,
         MAX(fecha) as ultima_fecha
       FROM reservas
@@ -51,8 +51,8 @@ export async function GET(request) {
       `SELECT
         fecha,
         COUNT(*) as reservas,
-        COALESCE(SUM(asistio), 0) as asistencias,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as asistencias,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
         TRIM(TO_CHAR(fecha, 'Day')) as dia_semana
       FROM reservas
       WHERE bloque_horario = ? ${dateCondition}
@@ -84,9 +84,9 @@ export async function GET(request) {
       `SELECT
         TRIM(TO_CHAR(fecha, 'Day')) as dia_semana,
         COUNT(*) as total_reservas,
-        COALESCE(SUM(asistio), 0) as total_asistencias,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
-        CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*) / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_por_dia
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as total_asistencias,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia,
+        CASE WHEN COUNT(DISTINCT fecha) > 0 THEN ROUND(COUNT(*)::numeric / COUNT(DISTINCT fecha), 2) ELSE 0 END as promedio_por_dia
       FROM reservas
       WHERE bloque_horario = ? ${dateCondition}
       GROUP BY EXTRACT(DOW FROM fecha), TRIM(TO_CHAR(fecha, 'Day'))
@@ -99,8 +99,8 @@ export async function GET(request) {
       `SELECT
         fecha,
         COUNT(*) as reservas,
-        COALESCE(SUM(asistio), 0) as asistencias,
-        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(asistio) / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia
+        COALESCE(SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END), 0) as asistencias,
+        CASE WHEN COUNT(*) > 0 THEN ROUND((SUM(CASE WHEN asistio = 1 THEN 1 ELSE 0 END)::numeric / COUNT(*)) * 100, 2) ELSE 0 END as porcentaje_asistencia
       FROM reservas
       WHERE bloque_horario = ? AND fecha >= CURRENT_DATE - INTERVAL '7 days'
       GROUP BY fecha
