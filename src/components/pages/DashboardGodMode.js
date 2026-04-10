@@ -249,7 +249,7 @@ export default function DashboardGodMode({ user, onLogout }) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-xs font-mono rounded-lg transition-all whitespace-nowrap ${
+              className={`px-4 py-2 text-xs font-mono rounded-lg transition-colors whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-transparent'
@@ -261,15 +261,17 @@ export default function DashboardGodMode({ user, onLogout }) {
         </div>
 
         {/* MESSAGE TOAST */}
-        {message && (
-          <div className={`rounded-lg px-4 py-3 text-sm font-mono border ${
-            message.toLowerCase().includes('error')
-              ? 'bg-red-500/10 border-red-500/30 text-red-400'
-              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-          }`}>
-            {message}
-          </div>
-        )}
+        <div className="min-h-[16px]">
+          {message && (
+            <div className={`rounded-lg px-4 py-3 text-sm font-mono border ${
+              message.toLowerCase().includes('error')
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+            }`}>
+              {message}
+            </div>
+          )}
+        </div>
 
         {/* TAB CONTENT */}
         {activeTab === 'monitor' && (

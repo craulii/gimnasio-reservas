@@ -190,7 +190,21 @@ export default function ReservarCupo({ user, cupos, loading, setMessage, fetchCu
       )}
 
       {loading ? (
-        <p className="text-center">Cargando cupos...</p>
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white rounded-lg p-4 shadow-sm animate-pulse">
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <div className="h-7 w-32 bg-gray-200 rounded" />
+                  <div className="h-4 w-20 bg-gray-100 rounded mt-1" />
+                </div>
+                <div className="h-10 w-24 bg-gray-200 rounded-lg" />
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-1" />
+              <div className="h-4 w-36 bg-gray-100 rounded mt-1" />
+            </div>
+          ))}
+        </div>
       ) : cuposFiltrados.length === 0 ? (
         <p className="text-center">No hay cupos disponibles en {sedeSeleccionada}</p>
       ) : (

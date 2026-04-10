@@ -39,7 +39,7 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
             </div>
             <button
               onClick={onLogout}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
             >
               <FiLogOut className="mr-2 h-4 w-4" />
               Cerrar sesión
@@ -47,15 +47,17 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
           </div>
 
           {/* Mensajes */}
-          {message && (
-            <div className={`rounded-lg p-4 ${
-              message.includes("Error") || message.includes("❌")
-                ? "bg-red-50 text-red-800 border border-red-200" 
-                : "bg-green-50 text-green-800 border border-green-200"
-            }`}>
-              <p className="text-sm font-medium">{message}</p>
-            </div>
-          )}
+          <div className="min-h-[24px]">
+            {message && (
+              <div className={`rounded-lg p-4 ${
+                message.includes("Error") || message.includes("❌")
+                  ? "bg-red-50 text-red-800 border border-red-200"
+                  : "bg-green-50 text-green-800 border border-green-200"
+              }`}>
+                <p className="text-sm font-medium">{message}</p>
+              </div>
+            )}
+          </div>
 
           {/* Tabs */}
           <div className="flex space-x-2 bg-gray-100 rounded-xl p-2 overflow-x-auto">
@@ -65,9 +67,9 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
+                  className={`flex-1 flex items-center justify-center px-4 py-3 rounded-lg font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === tab.id
-                      ? "bg-indigo-600 text-white shadow-lg transform scale-105"
+                      ? "bg-indigo-600 text-white shadow-lg"
                       : "text-gray-600 hover:bg-gray-200"
                   }`}
                 >

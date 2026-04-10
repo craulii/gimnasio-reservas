@@ -128,16 +128,18 @@ export default function DashboardAlumno({ user, message, setMessage, onLogout })
             </div>
           </div>
 
-          {/* Mensaje dinámico del sistema (Feedbacks de acciones) */}
-          {message && (
-            <div className={`rounded-md p-4 border ${
-              message.includes("éxito") || message.includes("correctamente")
-                ? "bg-green-50 text-green-800 border-green-200" 
-                : "bg-blue-50 text-blue-800 border-blue-200"
-            }`}>
-              <p className="text-sm font-medium">{message}</p>
-            </div>
-          )}
+          {/* Mensaje dinamico del sistema (Feedbacks de acciones) */}
+          <div className="min-h-[24px]">
+            {message && (
+              <div className={`rounded-md p-4 border ${
+                message.includes("éxito") || message.includes("correctamente")
+                  ? "bg-green-50 text-green-800 border-green-200"
+                  : "bg-blue-50 text-blue-800 border-blue-200"
+              }`}>
+                <p className="text-sm font-medium">{message}</p>
+              </div>
+            )}
+          </div>
 
           {/* Componente de Reservas (Ya arreglado previamente) */}
           <ReservarCupo 
@@ -155,7 +157,7 @@ export default function DashboardAlumno({ user, message, setMessage, onLogout })
         href="https://www.instagram.com/defider_usm/"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white p-4 rounded-full shadow-lg hover:scale-110 transition-transform duration-300 z-50 flex items-center justify-center"
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white p-4 rounded-full shadow-lg hover:brightness-110 transition-opacity duration-300 z-50 flex items-center justify-center"
         aria-label="Síguenos en Instagram"
       >
         <svg
