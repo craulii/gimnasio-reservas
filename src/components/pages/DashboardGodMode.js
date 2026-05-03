@@ -173,7 +173,13 @@ export default function DashboardGodMode({ user, onLogout }) {
   const ausencias = Number(stats.ausencias_auto || 0) + Number(stats.ausencias_manual || 0);
 
   // Cron status from new query
-  const cronOk = mantenimiento && mantenimiento.status === 'ok';
+  const cronStatus = mantenimiento?.status;
+  const cronOk = cronStatus === 'ok' || cronStatus === 'weekend';
+  const cronValue = cronStatus === 'ok'
+    ? `OK (${mantenimiento.cupos_generados})`
+    : cronStatus === 'weekend'
+    ? 'Fin de semana'
+    : 'Sin cupos';
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -231,7 +237,7 @@ export default function DashboardGodMode({ user, onLogout }) {
           />
           <HealthCard
             label="Cron"
-            value={cronOk ? `OK (${mantenimiento.cupos_generados})` : "Sin cupos"}
+            value={cronValue}
             ok={cronOk}
             icon="CRON"
           />

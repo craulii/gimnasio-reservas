@@ -78,12 +78,16 @@ export async function GET(request) {
       // 7. Verificar si cron/fallback genero cupos hoy
       (async () => {
         try {
+          const hoyDate = new Date(hoy + 'T12:00:00');
+          const diaSemana = hoyDate.getDay();
+          const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
           const [rows] = await pool.execute(
             `SELECT COUNT(*) as cupos_generados FROM cupos WHERE fecha = ?`,
             [hoy]
           );
           const count = Number(rows[0]?.cupos_generados || 0);
-          return { cupos_generados: count, status: count > 0 ? 'ok' : 'sin_cupos' };
+          const status = count > 0 ? 'ok' : esFinDeSemana ? 'weekend' : 'sin_cupos';
+          return { cupos_generados: count, status, es_fin_de_semana: esFinDeSemana };
         } catch {
           return null;
         }
