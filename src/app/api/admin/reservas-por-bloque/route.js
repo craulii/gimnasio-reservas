@@ -25,6 +25,7 @@ export async function GET(request) {
         r.sede,
         r.fecha,
         u.name,
+        u.rut,
         u.rol,
         r.email,
         r.asistio
@@ -52,6 +53,7 @@ export async function GET(request) {
       if (!agrupado[key]) agrupado[key] = [];
       agrupado[key].push({
         nombre: row.name,
+        rut: row.rut,
         email: row.email,
         rol: row.rol,
         sede: row.sede,

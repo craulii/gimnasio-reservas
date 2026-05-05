@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import ApiService from "@/services/api";
 import { sortBloques } from "@/app/utils/constants";
+import { formatearRut } from "@/lib/rut";
 
 export default function GodReservas({ setMessage, fetchCupos }) {
   const [loading, setLoading] = useState(false);
@@ -145,6 +146,9 @@ export default function GodReservas({ setMessage, fetchCupos }) {
                         <div key={`${bloqueKey}-${idx}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-800/30 transition-colors">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm text-white truncate">{user.nombre || "Sin Nombre"}</p>
+                            <p className="text-[11px] text-slate-400 font-mono truncate">
+                              {user.rut ? formatearRut(user.rut) : "Sin RUT"}
+                            </p>
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-xs text-slate-500 font-mono">{user.email}</span>
                               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${badge.cls}`}>

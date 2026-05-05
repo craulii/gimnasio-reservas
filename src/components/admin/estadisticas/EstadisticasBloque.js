@@ -4,6 +4,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, L
 // Asegúrate de que la ruta sea correcta
 import ApiService from "../../../services/api";
 import { sortBloques } from "../../../app/utils/constants";
+import { formatearRut } from "../../../lib/rut";
 
 export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMessage, setLoading }) {
   const [bloqueSeleccionado, setBloqueSeleccionado] = useState("");
@@ -236,7 +237,10 @@ export default function EstadisticasBloque({ fechaInicio, fechaFin, cupos, setMe
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {alumno.name}
+                          <div>{alumno.name}</div>
+                          <div className="text-xs text-gray-500 font-mono font-normal mt-0.5">
+                            {alumno.rut ? formatearRut(alumno.rut) : "Sin RUT"}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                           {alumno.email}

@@ -13,7 +13,7 @@ export async function GET(request) {
     }
 
     const [users] = await pool.execute(
-      "SELECT id, name, email, rol, is_admin, baneado FROM users ORDER BY name ASC"
+      "SELECT id, name, rut, email, rol, is_admin, baneado FROM users ORDER BY name ASC"
     );
 
     return NextResponse.json(users);

@@ -66,6 +66,7 @@ export async function GET(request) {
     const [alumnosFrecuentes] = await pool.execute(
       `SELECT
         u.name,
+        u.rut,
         r.email,
         COUNT(*) as veces_reservado,
         COALESCE(SUM(r.asistio), 0) as veces_asistido,
@@ -73,7 +74,7 @@ export async function GET(request) {
       FROM reservas r
       JOIN users u ON r.email = u.email
       WHERE r.bloque_horario = ? ${dateCondition}
-      GROUP BY r.email, u.name
+      GROUP BY r.email, u.name, u.rut
       ORDER BY veces_reservado DESC
       LIMIT 10`,
       dateParams

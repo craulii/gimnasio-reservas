@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { FiX, FiRefreshCw } from "react-icons/fi";
 import ApiService from "../../services/api";
 import { sortBloques } from "../../app/utils/constants";
+import { formatearRut } from "../../lib/rut";
 
 export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
   const [loading, setLoading] = useState(false);
@@ -176,6 +177,9 @@ export default function ReservasTab({ cupos, setMessage, fetchCupos }) {
                       >
                         <div className="flex-1">
                           <p className="font-semibold text-gray-800">{user.nombre || "Sin Nombre"}</p>
+                          <p className="text-xs text-gray-500 font-mono">
+                            {user.rut ? formatearRut(user.rut) : "Sin RUT"}
+                          </p>
                           <p className="text-sm text-gray-600">{user.email}</p>
                           <div className="flex gap-3 mt-1">
                             <p className="text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded">

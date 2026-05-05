@@ -4,6 +4,7 @@ import { FiPlus, FiMinus, FiSave, FiRefreshCw } from "react-icons/fi";
 // Asegúrate de que la ruta sea correcta (2 niveles arriba si está en components/admin/)
 import ApiService from "../../services/api";
 import { getFechaChile, sortByBloque } from "../../app/utils/constants";
+import { formatearRut } from "../../lib/rut";
 
 export default function GestionTab({ cupos, setMessage, fetchCupos }) {
   const [bloque, setBloque] = useState("");
@@ -412,6 +413,9 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
                 >
                   <div className="flex-1">
                     <p className="font-semibold text-gray-800">{user.name}</p>
+                    <p className="text-xs text-gray-500 font-mono">
+                      {user.rut ? formatearRut(user.rut) : "Sin RUT"}
+                    </p>
                     <p className="text-sm text-gray-600">{user.email}</p>
                     {user.faltas > 0 && (
                       <p className="text-xs text-orange-600 mt-1 font-bold">

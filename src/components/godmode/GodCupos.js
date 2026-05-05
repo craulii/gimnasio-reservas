@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import ApiService from "@/services/api";
 import { getFechaChile, sortByBloque } from "@/app/utils/constants";
+import { formatearRut } from "@/lib/rut";
 
 export default function GodCupos({ cupos, setMessage, fetchCupos }) {
   const [bloque, setBloque] = useState("");
@@ -289,6 +290,9 @@ export default function GodCupos({ cupos, setMessage, fetchCupos }) {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white">{user.name}</p>
+                    <p className="text-[11px] text-slate-400 font-mono">
+                      {user.rut ? formatearRut(user.rut) : "Sin RUT"}
+                    </p>
                     <p className="text-xs text-slate-500 font-mono">{user.email}</p>
                     {user.faltas > 0 && (
                       <p className="text-[10px] text-amber-400 font-mono mt-0.5">
