@@ -8,6 +8,8 @@ export default function GodUsuarios({ setMessage }) {
   const [usuarios, setUsuarios] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [tipo, setTipo] = useState("todos");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
   const [loading, setLoading] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -15,10 +17,10 @@ export default function GodUsuarios({ setMessage }) {
   const [loadingFaltas, setLoadingFaltas] = useState(false);
   const debounceRef = useRef(null);
 
-  // Tipo cambia -> fetch inmediato
-  useEffect(() => { cargarUsuarios(); }, [tipo]);
+  // Filtros de selección -> fetch inmediato
+  useEffect(() => { cargarUsuarios(); }, [tipo, sortBy, sortDir]);
 
-  // Busqueda cambia -> debounce 400ms
+  // Búsqueda -> debounce 400ms
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => cargarUsuarios(), 400);
@@ -28,7 +30,7 @@ export default function GodUsuarios({ setMessage }) {
   const cargarUsuarios = async () => {
     setLoading(true);
     try {
-      const { ok, data } = await ApiService.getUsuarios(tipo, busqueda);
+      const { ok, data } = await ApiService.getUsuarios(tipo, busqueda, sortBy, sortDir);
       if (ok) {
         setUsuarios(Array.isArray(data) ? data : (data?.usuarios || []));
       } else {
@@ -107,20 +109,33 @@ export default function GodUsuarios({ setMessage }) {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+        {/* Fila 1: Búsqueda + botón */}
+        <div className="flex gap-3">
+          <div className="flex-1">
             <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Buscar</label>
             <input
               type="text"
-              placeholder="Nombre o email..."
+              placeholder="Nombre, RUT o correo..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 text-sm"
             />
           </div>
+          <div className="flex items-end">
+            <button
+              onClick={cargarUsuarios}
+              className="px-4 py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded-lg font-mono text-sm hover:bg-cyan-500/30 transition-colors whitespace-nowrap"
+            >
+              Buscar
+            </button>
+          </div>
+        </div>
+
+        {/* Fila 2: Filtro tipo + orden + dirección */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Tipo</label>
+            <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Filtrar</label>
             <select
               value={tipo}
               onChange={(e) => setTipo(e.target.value)}
@@ -129,15 +144,33 @@ export default function GodUsuarios({ setMessage }) {
               <option value="todos">Todos</option>
               <option value="alumnos">Alumnos</option>
               <option value="admins">Admins</option>
+              <option value="baneados">Baneados</option>
+              <option value="con_faltas">Con faltas activas</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <button
-              onClick={cargarUsuarios}
-              className="w-full px-4 py-2 bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 rounded-lg font-mono text-sm hover:bg-cyan-500/30 transition-colors"
+          <div>
+            <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Ordenar por</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 text-sm"
             >
-              Buscar
-            </button>
+              <option value="name">Nombre</option>
+              <option value="faltas">Faltas</option>
+              <option value="total_reservas">Reservas</option>
+              <option value="baneado">Estado baneo</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[10px] font-mono text-slate-500 uppercase tracking-wider mb-1">Dirección</label>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 text-sm"
+            >
+              <option value="asc">A→Z / menor primero</option>
+              <option value="desc">Z→A / mayor primero</option>
+            </select>
           </div>
         </div>
       </div>
