@@ -184,11 +184,11 @@ class ApiService {
 
   // --- ADMIN: USUARIOS ---
 
-  static async getUsuarios(tipo, search) {
+  static async getUsuarios(tipo, search, sortBy, sortDir) {
     let endpoint = `/api/admin/usuarios?tipo=${tipo}`;
-    if (search) {
-      endpoint += `&search=${encodeURIComponent(search)}`;
-    }
+    if (search) endpoint += `&search=${encodeURIComponent(search)}`;
+    if (sortBy) endpoint += `&sortBy=${sortBy}`;
+    if (sortDir) endpoint += `&sortDir=${sortDir}`;
     return await fetchWithAuth(endpoint, { method: "GET" });
   }
 

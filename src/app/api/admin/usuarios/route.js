@@ -19,6 +19,18 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const search = (searchParams.get("search") || "").trim();
     const tipo = searchParams.get("tipo") || "todos";
+    const sortBy = searchParams.get("sortBy") || "name";
+    const sortDir = searchParams.get("sortDir") || "asc";
+
+    // Whitelist para evitar SQL injection en ORDER BY
+    const SORT_COLS = {
+      name: "u.name",
+      faltas: "u.faltas",
+      total_reservas: "COALESCE(r.total_reservas, 0)",
+      baneado: "u.baneado",
+    };
+    const sortCol = SORT_COLS[sortBy] || "u.name";
+    const sortDirSafe = sortDir === "desc" ? "DESC" : "ASC";
 
     let query = `
       SELECT u.rol, u.rut, u.name, u.email, u.is_admin, u.faltas, u.baneado,
@@ -39,6 +51,10 @@ export async function GET(request) {
       query += " AND u.is_admin = 0";
     } else if (tipo === "admins") {
       query += " AND u.is_admin = 1";
+    } else if (tipo === "baneados") {
+      query += " AND u.baneado = 1";
+    } else if (tipo === "con_faltas") {
+      query += " AND u.faltas > 0 AND u.is_admin = 0";
     }
 
     if (search) {
@@ -47,7 +63,7 @@ export async function GET(request) {
       params.push(term, term, term, term);
     }
 
-    query += " ORDER BY u.name ASC LIMIT 500";
+    query += ` ORDER BY ${sortCol} ${sortDirSafe} LIMIT 500`;
 
     const [users] = await pool.execute(query, params);
 

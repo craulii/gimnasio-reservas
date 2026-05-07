@@ -9,6 +9,8 @@ export default function UsuariosTab({ setMessage }) {
   const [usuarios, setUsuarios] = useState([]);
   const [busquedaUsuarios, setBusquedaUsuarios] = useState("");
   const [tipoUsuarios, setTipoUsuarios] = useState("todos");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortDir, setSortDir] = useState("asc");
   const [loading, setLoading] = useState(false);
   const [usuarioEditando, setUsuarioEditando] = useState(null);
   const [modalUsuario, setModalUsuario] = useState(false);
@@ -16,10 +18,10 @@ export default function UsuariosTab({ setMessage }) {
   const [loadingFaltas, setLoadingFaltas] = useState(false);
   const debounceRef = useRef(null);
 
-  // Tipo cambia -> fetch inmediato
-  useEffect(() => { cargarUsuarios(); }, [tipoUsuarios]);
+  // Filtros de selección -> fetch inmediato
+  useEffect(() => { cargarUsuarios(); }, [tipoUsuarios, sortBy, sortDir]);
 
-  // Busqueda cambia -> debounce 400ms
+  // Búsqueda -> debounce 400ms
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => cargarUsuarios(), 400);
@@ -29,7 +31,7 @@ export default function UsuariosTab({ setMessage }) {
   const cargarUsuarios = async () => {
     setLoading(true);
     try {
-      const { ok, data } = await ApiService.getUsuarios(tipoUsuarios, busquedaUsuarios);
+      const { ok, data } = await ApiService.getUsuarios(tipoUsuarios, busquedaUsuarios, sortBy, sortDir);
       
       if (ok) {
         // Robustez: asegurar que data sea un array
@@ -123,24 +125,33 @@ export default function UsuariosTab({ setMessage }) {
   return (
     <div className="space-y-6">
       {/* Filtros y Búsqueda */}
-      <div className="bg-gray-100 p-4 rounded-lg">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-800 mb-1">
-              Buscar usuario
-            </label>
+      <div className="bg-gray-100 p-4 rounded-lg space-y-3">
+        {/* Fila 1: Búsqueda + botón */}
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-800 mb-1">Buscar usuario</label>
             <input
               type="text"
-              placeholder="Nombre o email..."
+              placeholder="Nombre, RUT o correo..."
               value={busquedaUsuarios}
               onChange={(e) => setBusquedaUsuarios(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+          <div className="flex items-end">
+            <button
+              onClick={cargarUsuarios}
+              className="px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors whitespace-nowrap"
+            >
+              Buscar
+            </button>
+          </div>
+        </div>
+
+        {/* Fila 2: Filtros de tipo, orden y dirección */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-800 mb-1">
-              Tipo de usuario
-            </label>
+            <label className="block text-sm font-medium text-gray-800 mb-1">Filtrar por</label>
             <select
               value={tipoUsuarios}
               onChange={(e) => setTipoUsuarios(e.target.value)}
@@ -149,15 +160,33 @@ export default function UsuariosTab({ setMessage }) {
               <option value="todos">Todos los usuarios</option>
               <option value="alumnos">Solo alumnos</option>
               <option value="admins">Solo administradores</option>
+              <option value="baneados">Solo baneados</option>
+              <option value="con_faltas">Con faltas activas</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <button
-              onClick={cargarUsuarios}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1">Ordenar por</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Buscar
-            </button>
+              <option value="name">Nombre</option>
+              <option value="faltas">Faltas</option>
+              <option value="total_reservas">Reservas</option>
+              <option value="baneado">Estado de baneo</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-800 mb-1">Dirección</label>
+            <select
+              value={sortDir}
+              onChange={(e) => setSortDir(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="asc">Ascendente (A→Z / menor primero)</option>
+              <option value="desc">Descendente (Z→A / mayor primero)</option>
+            </select>
           </div>
         </div>
       </div>
