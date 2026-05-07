@@ -5,6 +5,7 @@ const GOD_MODE_EMAILS = ['jose.vargasv@usm.cl', 'crauli1@usm.cl', 'christian.riq
 
 const PUBLIC_PATHS = [
   '/api/login',
+  '/api/logout',
   '/api/auth/register',
   '/api/register',
   '/api/auth/check', // Crucial para que el frontend verifique sesión sin error rojo

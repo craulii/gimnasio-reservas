@@ -65,7 +65,8 @@ export default function Home() {
 
     } catch (error) {
       console.error("Error en logout:", error);
-      setMessage(`Error al cerrar sesión: ${error.message}`);
+      // Limpiar estado local igualmente — si falla es porque la sesión ya era inválida
+      setUser(null);
       setLoading(false);
     }
   };
