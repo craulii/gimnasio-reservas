@@ -80,13 +80,13 @@ export async function GET(request) {
       queryParams
     );
 
-    // C. DÍAS FALTADOS (incluye manuales y auto-procesadas)
+    // C. DÍAS FALTADOS — sin filtro de fecha para coincidir exactamente con users.faltas
     const [diasFaltados] = await pool.execute(
       `SELECT id, fecha, bloque_horario, sede, asistio
       FROM reservas
-      WHERE email = ? AND asistio IN (0, 2) ${dateCondition}
+      WHERE email = ? AND asistio IN (0, 2)
       ORDER BY fecha DESC`,
-      queryParams
+      [targetEmail]
     );
 
     // D. HISTORIAL DIARIO
