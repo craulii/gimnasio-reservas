@@ -216,7 +216,7 @@ class ApiService {
   static async desbanearUsuario(email) {
     return await fetchWithAuth('/api/admin/usuarios', {
       method: "PUT",
-      body: JSON.stringify({ email, baneado: 0, faltas: 0 }),
+      body: JSON.stringify({ email, baneado: 0, faltas: 0, resetDate: true }),
     });
   }
 

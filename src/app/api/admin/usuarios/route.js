@@ -68,10 +68,10 @@ export async function PUT(request) {
       return NextResponse.json({ error: "Solo admin" }, { status: 403 });
     }
 
-    const { email, name, newEmail, password, isAdmin, rut, rol, faltas, baneado } = await request.json();
+    const { email, name, newEmail, password, isAdmin, rut, rol, faltas, baneado, resetDate } = await request.json();
 
-    if (!email || !name) {
-      return NextResponse.json({ error: "Email y nombre son obligatorios" }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: "Email es obligatorio" }, { status: 400 });
     }
 
     console.log(`[ADMIN] Actualizando usuario: ${email}`);
@@ -97,9 +97,18 @@ export async function PUT(request) {
       }
     }
 
-    // Construir query dinámico
-    let updateParts = ["name = ?", "is_admin = ?"];
-    let updateParams = [name.trim(), isAdmin ? 1 : 0];
+    // Construir query dinámico (name e is_admin son opcionales para updates parciales como desbanear)
+    let updateParts = [];
+    let updateParams = [];
+
+    if (name) {
+      updateParts.push("name = ?");
+      updateParams.push(name.trim());
+    }
+    if (typeof isAdmin !== "undefined") {
+      updateParts.push("is_admin = ?");
+      updateParams.push(isAdmin ? 1 : 0);
+    }
 
     // Actualizar RUT
     if (typeof rut === "string" && rut.trim() !== "") {
@@ -124,16 +133,30 @@ export async function PUT(request) {
       updateParams.push(rol.trim());
     }
 
-    // Actualizar Faltas
+    // Actualizar Faltas (auto-sincroniza baneado si no se envía explícitamente, evita estado inconsistente)
     if (typeof faltas === "number" && faltas >= 0) {
+      const faltasNorm = Math.floor(faltas);
       updateParts.push("faltas = ?");
-      updateParams.push(Math.floor(faltas));
+      updateParams.push(faltasNorm);
+      if (typeof baneado === "undefined") {
+        updateParts.push("baneado = ?");
+        updateParams.push(faltasNorm >= 3 ? 1 : 0);
+      }
     }
 
-    // Actualizar Baneado
+    // Actualizar Baneado (explícito tiene precedencia sobre auto-sync)
     if (typeof baneado !== "undefined") {
       updateParts.push("baneado = ?");
       updateParams.push(baneado ? 1 : 0);
+    }
+
+    // Al desbanear, resetear la fecha de conteo para que el cron no re-cuente ausencias antiguas
+    if (resetDate) {
+      updateParts.push("ultimo_reset_faltas = NOW()");
+    }
+
+    if (updateParts.length === 0) {
+      return NextResponse.json({ error: "No hay campos para actualizar" }, { status: 400 });
     }
 
     // Actualizar Email

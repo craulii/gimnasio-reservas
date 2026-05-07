@@ -72,6 +72,35 @@ async function sincronizarContadores(connection) {
   console.log("Contadores sincronizados.");
 }
 
+async function sincronizarFaltas(connection) {
+  console.log("Sincronizando faltas con ausencias reales...");
+
+  await connection.execute(`
+    UPDATE users
+    SET
+      faltas = LEAST(
+        (SELECT COUNT(*) FROM reservas r
+         WHERE r.email = users.email
+           AND r.asistio IN (0, 2)
+           AND r.fecha > COALESCE(users.ultimo_reset_faltas, '2000-01-01')),
+        3
+      ),
+      baneado = CASE
+        WHEN LEAST(
+          (SELECT COUNT(*) FROM reservas r
+           WHERE r.email = users.email
+             AND r.asistio IN (0, 2)
+             AND r.fecha > COALESCE(users.ultimo_reset_faltas, '2000-01-01')),
+          3
+        ) >= 3 THEN 1
+        ELSE 0
+      END
+    WHERE is_admin = 0
+  `);
+
+  console.log("Faltas sincronizadas con registros reales de reservas.");
+}
+
 async function limpiezaSemanal(connection) {
   console.log("INICIANDO LIMPIEZA DE DATOS ANTIGUOS...");
 
@@ -122,10 +151,13 @@ export async function GET(request) {
     // 1. Generar cupos para la semana (hoy + 6 días)
     await generarCuposSemana(connection);
 
-    // 2. Sincronizar
+    // 2. Sincronizar contadores de cupos
     await sincronizarContadores(connection);
 
-    // 3. Limpiar (Solo los lunes = día 1)
+    // 3. Sincronizar faltas con ausencias reales (evita desyncs por ediciones manuales)
+    await sincronizarFaltas(connection);
+
+    // 4. Limpiar (Solo los lunes = día 1)
     const hoy = new Date();
     const esLunes = hoy.getDay() === 1;
     if (esLunes) {
