@@ -98,10 +98,13 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
         setUsuariosBloque(listaAlumnos);
         
         // Inicializar asistencias
+        // asistio=1 → true (presente), asistio=0 → false (ausente manual), null/2 → null (pendiente)
+        // asistio=2 (auto-procesado) se muestra como pendiente para que 1 clic lo marque presente
         const asistenciasIniciales = {};
         listaAlumnos.forEach(user => {
-          // Si asistio es 1 -> true, 0 -> false, null -> null
-          asistenciasIniciales[user.email] = user.asistio === null ? null : user.asistio === 1;
+          if (user.asistio === 1) asistenciasIniciales[user.email] = true;
+          else if (user.asistio === 0) asistenciasIniciales[user.email] = false;
+          else asistenciasIniciales[user.email] = null; // null y 2 → pendiente
         });
         
         setAsistencias(asistenciasIniciales);
@@ -391,6 +394,7 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
           <div className="space-y-2 max-h-96 overflow-y-auto mb-4 custom-scrollbar">
             {usuariosBloque.map((user) => {
               const estado = asistencias[user.email];
+              const marcadoPorSistema = user.asistio === 2;
               let bgColor = "bg-gray-50 border-gray-300";
               let icon = "⏳";
               let estadoTexto = "Pendiente";
@@ -417,6 +421,11 @@ export default function GestionTab({ cupos, setMessage, fetchCupos }) {
                       {user.rut ? formatearRut(user.rut) : "Sin RUT"}
                     </p>
                     <p className="text-sm text-gray-600">{user.email}</p>
+                    {marcadoPorSistema && estado === null && (
+                      <p className="text-xs text-amber-600 mt-1 font-medium">
+                        ⚡ Marcado por sistema — confirme asistencia
+                      </p>
+                    )}
                     {user.faltas > 0 && (
                       <p className="text-xs text-orange-600 mt-1 font-bold">
                         ⚠️ {user.faltas} falta{user.faltas > 1 ? 's' : ''}

@@ -25,9 +25,9 @@ export async function POST(request) {
     for (const asistencia of asistencias) {
       const { email, asistio } = asistencia;
 
-      // Obtener el estado ANTERIOR de la asistencia
+      // Obtener el estado ANTERIOR con lock para evitar race condition con auto-proceso
       const [reservaAnterior] = await connection.query(
-        "SELECT asistio FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = ?",
+        "SELECT asistio FROM reservas WHERE email = ? AND bloque_horario = ? AND sede = ? AND fecha = ? FOR UPDATE",
         [email, bloque_horario, sede, fecha]
       );
 

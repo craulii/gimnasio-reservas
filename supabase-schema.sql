@@ -20,7 +20,7 @@ CREATE TABLE reservas (
   fecha DATE NOT NULL,
   bloque_horario VARCHAR(10) NOT NULL,
   sede VARCHAR(50) NOT NULL,
-  asistio INTEGER DEFAULT 0,
+  asistio INTEGER DEFAULT NULL,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
