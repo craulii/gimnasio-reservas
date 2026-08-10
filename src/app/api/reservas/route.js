@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, HORARIOS_CIERRE, getBloquesParaSedeFecha, reservasAbiertas } from "@/app/utils/constants";
+import { getFechaChile, reservasAbiertas } from "@/app/utils/constants";
 import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
 import { getUserFromRequest } from "@/lib/auth";
+import { getBloquesActivosAsync, getHorariosCierreAsync } from "@/lib/config-bloques";
 
 // Función de mantenimiento (Reseteo de Faltas)
 async function verificarYResetearFaltas(connection, email, ultimoReset, faltasActuales) {
@@ -90,7 +91,7 @@ export async function POST(request) {
     const hoyChile = getFechaChile();
 
     // Validar que el bloque esté permitido para esta sede/fecha
-    const bloquesPermitidos = getBloquesParaSedeFecha(sede, hoyChile);
+    const bloquesPermitidos = await getBloquesActivosAsync(sede, hoyChile);
     if (!bloquesPermitidos.includes(bloque_horario)) {
       connection.release();
       return NextResponse.json({ error: "Bloque no disponible para esta sede hoy" }, { status: 400 });
@@ -109,7 +110,8 @@ export async function POST(request) {
     await procesarAusenciasDirecto(bloque_horario, sede, hoyChile);
 
     // F1. Verificar cierre de bloque (25 min después de inicio)
-    const horaCierre = HORARIOS_CIERRE[bloque_horario];
+    const horariosCierre = await getHorariosCierreAsync();
+    const horaCierre = horariosCierre[bloque_horario];
     if (horaCierre) {
       const horaActual = new Date().toLocaleTimeString('es-CL', {
         timeZone: 'America/Santiago',

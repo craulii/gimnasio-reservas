@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import ApiService from "@/services/api";
-import { SEDES, getBloquesParaSedeFecha, HORARIOS_BLOQUE, sortBloques, getFechaChile } from "@/app/utils/constants";
+import { SEDES, BLOQUES_HORARIOS, sortBloques, getFechaChile } from "@/app/utils/constants";
 
 export default function GodHerramientas({ setMessage }) {
   // --- Generar Cupos state ---
@@ -21,6 +21,7 @@ export default function GodHerramientas({ setMessage }) {
   const [reservando, setReservando] = useState(false);
   const [buscando, setBuscando] = useState(false);
   const debounceRef = useRef(null);
+  const [configBloques, setConfigBloques] = useState(null);
 
   // Date limits (Chile timezone — God Mode permite hoy)
   const hoyChile = getFechaChile();
@@ -29,6 +30,13 @@ export default function GodHerramientas({ setMessage }) {
   maxDate.setDate(maxDate.getDate() + 90);
   const minDateStr = hoyChile;
   const maxDateStr = maxDate.toISOString().split('T')[0];
+
+  // --- Cargar config de bloques activos/horarios una vez al montar ---
+  useEffect(() => {
+    ApiService.getConfigBloques().then((res) => {
+      if (res.ok) setConfigBloques(res.data);
+    }).catch(() => {});
+  }, []);
 
   // --- Búsqueda de alumnos con debounce ---
   useEffect(() => {
@@ -50,15 +58,18 @@ export default function GodHerramientas({ setMessage }) {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [busqueda]);
 
-  // --- Actualizar bloques cuando cambia sede o fecha ---
+  // --- Actualizar bloques cuando cambia sede, fecha o llega la config ---
   useEffect(() => {
-    if (fechaReserva && sedeReserva) {
-      const bloques = getBloquesParaSedeFecha(sedeReserva, fechaReserva);
+    if (fechaReserva && sedeReserva && configBloques) {
+      const esViernes = new Date(fechaReserva + 'T12:00:00').getDay() === 5;
+      const tipoDia = esViernes ? 'viernes' : 'normal';
+      const activosSede = configBloques.activos?.[sedeReserva]?.[tipoDia] || {};
+      const bloques = BLOQUES_HORARIOS.filter((b) => activosSede[b]);
       setBloquesDisponibles(bloques.sort(sortBloques));
       setBloqueReserva("");
       setDisponibilidad(null);
     }
-  }, [fechaReserva, sedeReserva]);
+  }, [fechaReserva, sedeReserva, configBloques]);
 
   // --- Cargar disponibilidad cuando cambia bloque ---
   const fetchDisponibilidad = useCallback(async () => {
@@ -290,7 +301,7 @@ export default function GodHerramientas({ setMessage }) {
             <label className="block text-xs text-slate-400 font-mono mb-1">Bloque horario</label>
             <div className="grid grid-cols-2 gap-1.5">
               {bloquesDisponibles.map(bloque => {
-                const horario = HORARIOS_BLOQUE[bloque];
+                const horario = configBloques?.horarios?.[bloque];
                 const cupoInfo = getCupoInfo(bloque);
                 const disponibles = cupoInfo ? cupoInfo.total - cupoInfo.reservados : null;
                 const lleno = disponibles !== null && disponibles <= 0;

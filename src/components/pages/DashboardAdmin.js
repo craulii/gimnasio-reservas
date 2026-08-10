@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FiLogOut, FiSettings, FiCalendar, FiBarChart2, FiUsers, FiAlertTriangle } from "react-icons/fi";
+import { FiLogOut, FiSettings, FiCalendar, FiBarChart2, FiUsers, FiAlertTriangle, FiClock } from "react-icons/fi";
 
 // ✅ CORRECCIÓN: Usamos @ para importar desde la raíz src
 import GestionTab from "@/components/admin/GestionTab";
@@ -8,6 +8,7 @@ import ReservasTab from "@/components/admin/ReservasTab";
 import EstadisticasTab from "@/components/admin/EstadisticasTab";
 import UsuariosTab from "@/components/admin/UsuariosTab";
 import BotonPanicoTab from "@/components/admin/BotonPanicoTab";
+import ConfigBloquesTab from "@/components/admin/ConfigBloquesTab";
 
 import useCupos from "@/hooks/useCupos"; // ✅ Importante: @/hooks
 
@@ -21,6 +22,7 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
     { id: "estadisticas", label: "Estadísticas", icon: FiBarChart2 },
     { id: "usuarios", label: "Usuarios", icon: FiUsers },
     { id: "panico", label: "Botón Pánico", icon: FiAlertTriangle },
+    { id: "config-bloques", label: "Horarios", icon: FiClock },
   ];
 
   return (
@@ -107,6 +109,9 @@ export default function DashboardAdmin({ user, message, setMessage, onLogout }) 
             )}
             {activeTab === "panico" && (
               <BotonPanicoTab />
+            )}
+            {activeTab === "config-bloques" && (
+              <ConfigBloquesTab />
             )}
           </div>
         </div>

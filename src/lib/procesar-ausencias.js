@@ -1,5 +1,5 @@
 import pool from "@/lib/db";
-import { HORARIOS_LIMITE } from "@/app/utils/constants";
+import { getHorariosLimiteAsync } from "@/lib/config-bloques";
 
 // Comparación de hora robusta
 export function horaAMinutos(hora) {
@@ -12,7 +12,8 @@ export function horaAMinutos(hora) {
 // cuando ya pasó el horario límite (15 min después de inicio del bloque)
 export async function procesarAusenciasDirecto(bloque, sede, fecha) {
   try {
-    const horaLimite = HORARIOS_LIMITE[bloque];
+    const horariosLimite = await getHorariosLimiteAsync();
+    const horaLimite = horariosLimite[bloque];
     if (!horaLimite) return;
 
     const horaActual = new Date().toLocaleTimeString('es-CL', {

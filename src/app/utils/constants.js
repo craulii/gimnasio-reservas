@@ -300,11 +300,11 @@ export function reservasAbiertas() {
 
 // Horario de cierre por sede y día (primer número del último bloque permitido)
 // Vitacura L-J: último bloque 13-14 (cierre 19:00)
-// Vitacura V:   último bloque 5-6   (cierre 13:00)
+// Vitacura V:   último bloque 7-8   (cierre 13:40)
 // San Joaquín L-J: último bloque 15-16 (cierre 20:00)
 // San Joaquín V:   último bloque 13-14 (cierre 18:40)
 export const HORARIO_CIERRE_SEDE = {
-  'Vitacura':     { default: 13, viernes: 5  },
+  'Vitacura':     { default: 13, viernes: 7  },
   'San Joaquín':  { default: 15, viernes: 13 },
 };
 

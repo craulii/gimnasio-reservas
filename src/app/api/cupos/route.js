@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, BLOQUES_HORARIOS, HORARIOS_LIMITE, getBloquesParaSedeFecha } from "@/app/utils/constants";
+import { getFechaChile, BLOQUES_HORARIOS } from "@/app/utils/constants";
 import { procesarAusenciasDirecto, horaAMinutos } from "@/lib/procesar-ausencias";
 import { getUserFromRequest } from "@/lib/auth";
+import { getBloquesActivosAsync, getHorariosLimiteAsync } from "@/lib/config-bloques";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -22,7 +23,7 @@ async function autoGenerarCupos(fecha) {
   console.log("[AUTO-CUPOS] Cron no corrio, generando cupos para:", fecha);
   for (const sede of SEDES) {
     const cuposSede = CUPOS_POR_SEDE[sede];
-    const bloquesSede = getBloquesParaSedeFecha(sede, fecha);
+    const bloquesSede = await getBloquesActivosAsync(sede, fecha);
     for (const bloque of bloquesSede) {
       await pool.execute(
         "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?) ON CONFLICT (bloque, sede, fecha) DO NOTHING",
@@ -53,7 +54,7 @@ export async function GET(request) {
       // Limpiar cupos restringidos solo si se acaban de generar
       if (cuposGenerados) {
         for (const s of SEDES) {
-          const bloquesValidos = getBloquesParaSedeFecha(s, fecha);
+          const bloquesValidos = await getBloquesActivosAsync(s, fecha);
           const bloquesInvalidos = BLOQUES_HORARIOS.filter(b => !bloquesValidos.includes(b));
           if (bloquesInvalidos.length > 0) {
             for (const bloque of bloquesInvalidos) {
@@ -77,9 +78,10 @@ export async function GET(request) {
         hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
       });
       const minutosActuales = horaAMinutos(horaActual);
+      const horariosLimite = await getHorariosLimiteAsync();
 
       for (const bloque of BLOQUES_HORARIOS) {
-        if (minutosActuales < horaAMinutos(HORARIOS_LIMITE[bloque])) continue;
+        if (minutosActuales < horaAMinutos(horariosLimite[bloque])) continue;
         for (const s of SEDES) {
           await procesarAusenciasDirecto(bloque, s, fecha);
         }

@@ -286,6 +286,26 @@ class ApiService {
     return await fetchWithAuth(endpoint, { method: "GET" });
   }
 
+  // --- ADMIN: CONFIG BLOQUES ---
+
+  static async getConfigBloques() {
+    return await fetchWithAuth('/api/admin/config-bloques', { method: "GET" });
+  }
+
+  static async guardarConfigBloques(activos, horarios) {
+    return await fetchWithAuth('/api/admin/config-bloques', {
+      method: "PUT",
+      body: JSON.stringify({ activos, horarios }),
+    });
+  }
+
+  static async aplicarConfigBloques(dias) {
+    return await fetchWithAuth('/api/admin/config-bloques', {
+      method: "POST",
+      body: JSON.stringify({ dias }),
+    });
+  }
+
   static async logout() {
     // Esto llama al archivo que creamos en el paso 1
     return await fetchWithAuth('/api/logout', { method: "POST" });

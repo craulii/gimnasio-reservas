@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, getBloquesParaSedeFecha } from "@/app/utils/constants";
+import { getFechaChile } from "@/app/utils/constants";
+import { getBloquesActivosAsync } from "@/lib/config-bloques";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -18,7 +19,7 @@ async function autoGenerarCuposDia(connection, fechaStr) {
 
   for (const sede of SEDES) {
     const cuposSede = CUPOS_POR_SEDE[sede];
-    const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
+    const bloquesSede = await getBloquesActivosAsync(sede, fechaStr);
     for (const bloque of bloquesSede) {
       await connection.execute(
         "INSERT INTO cupos (bloque, sede, total, reservados, fecha) VALUES (?, ?, ?, 0, ?) ON CONFLICT (bloque, sede, fecha) DO NOTHING",
@@ -62,7 +63,7 @@ export async function POST(request) {
     }
 
     // Validar bloque para sede/fecha
-    const bloquesPermitidos = getBloquesParaSedeFecha(sede, fecha);
+    const bloquesPermitidos = await getBloquesActivosAsync(sede, fecha);
     if (!bloquesPermitidos.includes(bloque_horario)) {
       return NextResponse.json({ error: "Bloque no disponible para esta sede en esa fecha" }, { status: 400 });
     }

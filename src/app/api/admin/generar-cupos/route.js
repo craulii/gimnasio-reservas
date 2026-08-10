@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { getFechaChile, getBloquesParaSedeFecha } from "@/app/utils/constants";
+import { getFechaChile } from "@/app/utils/constants";
+import { getBloquesActivosAsync } from "@/lib/config-bloques";
 
 const CUPOS_POR_SEDE = {
   'Vitacura': 13,
@@ -53,7 +54,7 @@ export async function POST(request) {
 
         for (const sede of SEDES) {
           const cuposSede = CUPOS_POR_SEDE[sede];
-          const bloquesSede = getBloquesParaSedeFecha(sede, fechaStr);
+          const bloquesSede = await getBloquesActivosAsync(sede, fechaStr);
 
           for (const bloque of bloquesSede) {
             const [result] = await pool.execute(
